@@ -1,8 +1,8 @@
-基于您的随想，我将为您设计一套模块化、可扩展的多智能体协作系统架构。这套架构将采用 “插件化Agent + 中心化编排” 的核心思想。
+基于您的随想，我将为您设计一套模块化、可扩展的多智能体协作系统架构。这套架构将采用 **“插件化Agent + 中心化编排”** 的核心思想。
 
-系统整体架构
+## 系统整体架构
 
-
+```
 ┌─────────────────────────────────────────────────────────┌─────────────────────────────────────────┐
 │                    前端界面层 (Frontend)                  │         外部服务层 (External Services)   │
 │  • 群组对话界面 (React/Vue)                              │  • LLM 提供商 (OpenAI/Claude/DeepSeek)   │
@@ -47,29 +47,22 @@
 │  • 用户/群组/Agent元数据        │  • 向量缓存                     │  • 记忆快照                      │
 │  • 消息历史                     │  • 会话锁                       │  • 输出文件                      │
 └────────────────────────────────┴────────────────────────────────┴──────────────────────────────────┘
+```
 
+## 核心模块详细设计
 
-核心模块详细设计
+### 1. 编程语言选择建议
+**推荐 TypeScript + Python 混合架构**：
+- **前端界面层**: TypeScript (React + Ant Design)
+- **核心编排引擎**: TypeScript (Node.js + NestJS/Express)
+- **AI Agent适配器**: Python (FastAPI) + TypeScript
+- **理由**: 
+  - TypeScript 类型安全，适合构建复杂系统
+  - 您会Python，可以将AI交互等复杂逻辑用Python实现
+  - AI生态中Python更成熟，但前端展示TypeScript更好
 
-1. 编程语言选择建议
-
-推荐 TypeScript + Python 混合架构：
-• 前端界面层: TypeScript (React + Ant Design)
-
-• 核心编排引擎: TypeScript (Node.js + NestJS/Express)
-
-• AI Agent适配器: Python (FastAPI) + TypeScript
-
-• 理由: 
-
-  • TypeScript 类型安全，适合构建复杂系统
-
-  • 您会Python，可以将AI交互等复杂逻辑用Python实现
-
-  • AI生态中Python更成熟，但前端展示TypeScript更好
-
-2. Agent交互规范设计
-
+### 2. Agent交互规范设计
+```typescript
 // 统一消息格式规范
 interface AgentMessage {
   id: string;
@@ -99,10 +92,10 @@ interface AgentMessage {
   };
   timestamp: number;
 }
+```
 
-
-3. 交互逻辑控制器（核心模块）
-
+### 3. 交互逻辑控制器（核心模块）
+```typescript
 class InteractionOrchestrator {
   // 可配置的响应策略
   private responseStrategies = {
@@ -161,10 +154,10 @@ class InteractionOrchestrator {
            && agent.config.canAutoRespond;
   }
 }
+```
 
-
-4. 分层记忆系统设计
-
+### 4. 分层记忆系统设计
+```typescript
 class LayeredMemorySystem {
   // 三层记忆结构
   private memoryLayers = {
@@ -220,10 +213,10 @@ class LayeredMemorySystem {
     return await this.summarizationService.summarize(recentMemories);
   }
 }
+```
 
-
-5. Agent技能框架设计
-
+### 5. Agent技能框架设计
+```python
 # Python实现的Agent技能管理
 from typing import Dict, List, Any, Optional
 from pydantic import BaseModel, Field
@@ -267,10 +260,10 @@ class SkillRegistry:
         """获取Agent所有技能"""
         skill_ids = self._agent_skills.get(agent_id, [])
         return [self._skills[sid] for sid in skill_ids if sid in self._skills]
+```
 
-
-6. 员工状态管理系统
-
+### 6. 员工状态管理系统
+```typescript
 // 实时状态追踪和可视化
 class AgentStatusManager {
   private agentStatuses = new Map<string, AgentStatus>();
@@ -319,33 +312,25 @@ class AgentStatusManager {
     };
   }
 }
+```
 
+## 关键设计决策说明
 
-关键设计决策说明
+### 1. 交互逻辑推荐方案
+**采用"混合响应模式"**：
+- **强制@提及**：必须响应，最高优先级
+- **自主判断**：Agent根据自身角色、相关性、当前状态决定是否响应
+- **响应排队**：引入响应队列，避免同时回复造成混乱
+- **超时机制**：设定响应超时，防止Agent"卡住"
 
-1. 交互逻辑推荐方案
+### 2. 记忆系统设计原则
+- **按会话隔离**：每个群组有独立记忆，避免信息污染
+- **分层共享**：重要决策/知识可升级到Agent或项目记忆
+- **自动摘要**：定期生成对话摘要，节省Token
+- **向量检索**：基于语义相似度检索相关记忆
 
-采用"混合响应模式"：
-• 强制@提及：必须响应，最高优先级
-
-• 自主判断：Agent根据自身角色、相关性、当前状态决定是否响应
-
-• 响应排队：引入响应队列，避免同时回复造成混乱
-
-• 超时机制：设定响应超时，防止Agent"卡住"
-
-2. 记忆系统设计原则
-
-• 按会话隔离：每个群组有独立记忆，避免信息污染
-
-• 分层共享：重要决策/知识可升级到Agent或项目记忆
-
-• 自动摘要：定期生成对话摘要，节省Token
-
-• 向量检索：基于语义相似度检索相关记忆
-
-3. Token优化策略
-
+### 3. Token优化策略
+```typescript
 // Token优化配置
 const TokenOptimizationConfig = {
   // 记忆检索策略
@@ -370,20 +355,16 @@ const TokenOptimizationConfig = {
     summaryFrequency: 20, // 每20条消息生成摘要
   }
 };
+```
 
+### 4. 系统扩展性设计
+- **插件化Agent接入**：通过适配器模式支持多种AI CLI/API
+- **模块化技能系统**：技能可插拔，支持动态注册
+- **可配置编排策略**：响应逻辑可配置，支持多种协作模式
+- **开放API接口**：提供RESTful API和WebSocket接口
 
-4. 系统扩展性设计
-
-• 插件化Agent接入：通过适配器模式支持多种AI CLI/API
-
-• 模块化技能系统：技能可插拔，支持动态注册
-
-• 可配置编排策略：响应逻辑可配置，支持多种协作模式
-
-• 开放API接口：提供RESTful API和WebSocket接口
-
-5. 推荐的Agent角色配置示例
-
+### 5. 推荐的Agent角色配置示例
+```yaml
 # agent-profiles.yaml
 agents:
   - id: "architect"
@@ -418,26 +399,23 @@ agents:
     responseConfig:
       monitorAll: true  # 监控所有对话
       interveneThreshold: 0.9  # 高阈值时才介入
+```
 
+## 实施建议
 
-实施建议
+### 第一阶段（MVP）
+1. **基础架构搭建**：实现基本的对话系统和1-2个Agent
+2. **简单交互逻辑**：先实现强制@提及和基础响应
+3. **基础记忆系统**：会话级别记忆存储
 
-第一阶段（MVP）
+### 第二阶段（功能完善）
+1. **智能响应机制**：实现Agent自主判断逻辑
+2. **技能系统**：添加可配置的技能框架
+3. **Token优化**：实现记忆摘要和智能检索
 
-1. 基础架构搭建：实现基本的对话系统和1-2个Agent
-2. 简单交互逻辑：先实现强制@提及和基础响应
-3. 基础记忆系统：会话级别记忆存储
+### 第三阶段（高级功能）
+1. **学习优化**：基于历史交互优化Agent行为
+2. **多模态支持**：支持文件、图片等输入
+3. **性能监控**：详细的性能分析和优化
 
-第二阶段（功能完善）
-
-1. 智能响应机制：实现Agent自主判断逻辑
-2. 技能系统：添加可配置的技能框架
-3. Token优化：实现记忆摘要和智能检索
-
-第三阶段（高级功能）
-
-1. 学习优化：基于历史交互优化Agent行为
-2. 多模态支持：支持文件、图片等输入
-3. 性能监控：详细的性能分析和优化
-
-这个架构设计平衡了灵活性和复杂性，您可以分阶段实施，逐步完善功能。核心是交互编排引擎和统一Agent接口，这两个模块决定了系统的协作效果和扩展能力。
+这个架构设计平衡了灵活性和复杂性，您可以分阶段实施，逐步完善功能。核心是**交互编排引擎**和**统一Agent接口**，这两个模块决定了系统的协作效果和扩展能力。
