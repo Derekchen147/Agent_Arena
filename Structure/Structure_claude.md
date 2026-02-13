@@ -280,24 +280,211 @@ class Turn:
                │
                ▼
 ┌─────────────────────────────┐
-│ Step 4: 排序与调度           │
+│ Step 4: 两阶段串行执行       │
 │                             │
-│ • must_reply 先执行         │
-│ • may_reply 按优先级排序    │
-│ • 总数不超过 max_responders │
-│ • 支持并行调用多个 Agent    │
+│ Phase A: must_reply（并行） │
+│   → 全部完成后，回复写入    │
+│     消息流，推前端           │
+│                             │
+│ Phase B: may_reply（并行）  │
+│   → 可以看到 Phase A 的回复 │
+│   → 全部完成后，回复写入    │
+│     消息流，推前端           │
+│                             │
+│ 总数不超过 max_responders   │
 └──────────────┬──────────────┘
                │
                ▼
 ┌─────────────────────────────┐
-│ Step 5: 收集回复 → 推前端   │
+│ Step 5: 收集 next_mentions  │
+│         批量开启下一个 Turn  │
 │                             │
-│ 每个 Agent 回复后：         │
-│ • 消息写入 SessionManager   │
-│ • 推送给前端（WebSocket）   │
-│ • 如果有 next_mentions，    │
-│   触发下一个 Turn           │
+│ 等本 Turn 全部回复完成后：  │
+│ • 汇总所有回复中的           │
+│   next_mentions，去重        │
+│ • 合并为下一个 Turn 的       │
+│   must_reply 列表            │
+│ • 不是每条回复立刻触发新     │
+│   Turn，而是「收齐再开」    │
 └─────────────────────────────┘
+```
+
+### 4.3 Turn 内部的执行模型（关键细节）
+
+一个 Turn 的内部执行分为**两个阶段**，阶段之间串行，阶段内部并行：
+
+```
+Turn N
+├── Phase A: must_reply agents（并行调用）
+│   │
+│   │  架构师、合规 同时收到消息，同时开始生成回复
+│   │  它们看到的上下文是一样的（都是到 Turn N 触发消息为止的历史）
+│   │  它们互相看不到对方本轮的回复（因为是同时执行的）
+│   │
+│   ├─ 架构师回复 → 写入消息流 → 推前端
+│   │   next_mentions: [开发]
+│   │
+│   └─ 合规回复 → 写入消息流 → 推前端
+│       next_mentions: [测试]
+│
+├── Phase B: may_reply agents（并行调用）
+│   │
+│   │  开发（自主判断要回复）收到消息
+│   │  它能看到 Phase A 中架构师和合规的回复（因为 Phase A 已完成）
+│   │  这样 may_reply 的 Agent 拥有更完整的信息
+│   │
+│   └─ 开发回复 → 写入消息流 → 推前端
+│       next_mentions: [测试]
+│
+└── Turn N 结束
+    │
+    │  汇总所有 next_mentions:
+    │  架构师 → [开发]
+    │  合规   → [测试]
+    │  开发   → [测试]
+    │
+    │  去重后: must_reply = [开发, 测试]
+    │  但是！开发已经在 Turn N 回复过了 → 从列表中移除
+    │  最终: must_reply = [测试]
+    │
+    ▼
+Turn N+1
+├── Phase A: must_reply = [测试]
+│   测试能看到 Turn N 中所有人的回复（架构师 + 合规 + 开发）
+│   ...
+```
+
+**为什么选择「收齐再开下一 Turn」而不是「边收边开」？**
+
+| 方案 | 优点 | 缺点 |
+|------|------|------|
+| **收齐再开（批量，本方案）** | 下一 Turn 的 Agent 能看到本 Turn 全部回复，信息完整；不会产生竞态条件 | 延迟略高（要等最慢的 Agent 完成） |
+| 边收边开（流式） | 延迟低，架构师一回复就立刻触发开发 | 开发看不到合规的回复；可能产生并发冲突；逻辑复杂 |
+
+**批量模式更安全、更可预测**，且 Agent 响应通常在秒级，多等几秒换来的是信息完整性。
+
+### 4.4 特殊情况处理
+
+**情况 1：多个 Agent @ 了同一个人**
+```
+Turn N:
+  架构师 next_mentions: [开发]    "请按这个方案实现"
+  合规   next_mentions: [开发]    "实现时注意以下合规要求"
+
+Turn N+1:
+  开发收到 must_reply
+  它的消息上下文中同时包含架构师和合规的回复
+  开发自己综合两边的要求来回复（这就是"收齐再开"的好处）
+```
+
+**情况 2：被 next_mention 的人已经在本 Turn 回复过了**
+```
+Turn N:
+  架构师 must_reply → 回复了 → next_mentions: [开发]
+  开发   may_reply  → 也回复了 → next_mentions: [测试]
+
+去重逻辑：
+  汇总 next_mentions = [开发, 测试]
+  开发已经在 Turn N 回复过 → 移除
+  最终 Turn N+1 的 must_reply = [测试]
+```
+
+但如果架构师 @ 开发的内容是**新的指令**（不是对之前消息的回应），开发是否需要再回复一次？这里提供一个可配置项：
+
+```python
+class TurnConfig:
+    # 如果某 Agent 已在本 Turn 回复过，但被其他 Agent next_mention 了，
+    # 是否在下一 Turn 中再次触发它？
+    re_invoke_already_replied: bool = False  # 默认不重复触发
+    # 设为 True 则允许同一个 Agent 在连续 Turn 中被反复调用
+    # （适合需要多轮确认的场景，但需配合 chain_depth_limit 使用）
+```
+
+**情况 3：may_reply 的 Agent 也带了 next_mentions**
+```
+Turn N:
+  架构师 must_reply → next_mentions: [开发]
+  测试   may_reply  → next_mentions: [开发, 合规]
+
+处理方式：完全一样。may_reply 的 Agent 回复同样可以 @ 其他人。
+汇总 next_mentions 时不区分来源是 must 还是 may。
+```
+
+**情况 4：没有任何 Agent 产生 next_mentions**
+```
+Turn N:
+  架构师 must_reply → next_mentions: []
+  开发   may_reply  → next_mentions: []
+
+→ 没有新的 must_reply
+→ 不会产生 Turn N+1
+→ 等待人类发送下一条消息
+```
+
+### 4.5 执行伪代码
+
+把以上逻辑汇总成 Orchestrator 的核心方法：
+
+```python
+class Orchestrator:
+    async def execute_turn(self, turn: Turn, session_id: str):
+        """执行一个完整的 Turn"""
+
+        all_next_mentions: set[str] = set()
+        replied_agents: set[str] = set()
+
+        # ── Phase A: must_reply（并行）──
+        must_tasks = [
+            self._invoke_one(agent_id, session_id, "must_reply", turn)
+            for agent_id in turn.must_reply_agents
+        ]
+        must_outputs = await asyncio.gather(*must_tasks)
+
+        for agent_id, output in zip(turn.must_reply_agents, must_outputs):
+            await self.session_manager.save_message(output, turn.turn_id)
+            await self.ws_manager.broadcast_message(output)
+            all_next_mentions.update(output.next_mentions)
+            replied_agents.add(agent_id)
+
+        # ── Phase B: may_reply（并行）──
+        # may_reply 的 Agent 现在能看到 Phase A 的回复了
+        may_agents = [
+            aid for aid in turn.may_reply_agents
+            if aid not in replied_agents  # 已经回复过的不再重复
+        ]
+        may_tasks = [
+            self._invoke_one(agent_id, session_id, "may_reply", turn)
+            for agent_id in may_agents
+        ]
+        may_outputs = await asyncio.gather(*may_tasks)
+
+        for agent_id, output in zip(may_agents, may_outputs):
+            if output.should_respond:  # may_reply 可以选择不回复
+                await self.session_manager.save_message(output, turn.turn_id)
+                await self.ws_manager.broadcast_message(output)
+                all_next_mentions.update(output.next_mentions)
+                replied_agents.add(agent_id)
+
+        # ── 决定是否开启下一个 Turn ──
+        # 去重：移除本 Turn 已回复过的 Agent（可配置）
+        if not self.config.re_invoke_already_replied:
+            all_next_mentions -= replied_agents
+
+        if all_next_mentions and turn.chain_depth < self.config.chain_depth_limit:
+            next_turn = Turn(
+                turn_id=generate_turn_id(),
+                trigger_message=None,  # 下一 Turn 的触发不是单条消息，而是本 Turn 的全部回复
+                must_reply_agents=list(all_next_mentions),
+                may_reply_agents=self._evaluate_may_reply(session_id, all_next_mentions),
+                chain_depth=turn.chain_depth + 1,
+            )
+            await self.execute_turn(next_turn, session_id)  # 递归
+        elif turn.chain_depth >= self.config.chain_depth_limit:
+            # 链式深度达到上限，通知前端
+            await self.ws_manager.broadcast_system_message(
+                session_id,
+                f"⚠️ 自动对话已达到 {self.config.chain_depth_limit} 轮上限，等待人类指令。"
+            )
 ```
 
 ### 4.3 防护机制（防止混乱）

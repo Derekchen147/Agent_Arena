@@ -9,9 +9,9 @@ $httpPort = "你的HTTP端口"  # 比如：7890/7892/10809
 $socksPort = "你的SOCKS5端口"  # 比如：7891/7893/10808
 
 # 设置代理（用你的真实端口）
-$env:HTTP_PROXY = "http://127.0.0.1:$httpPort"
-$env:HTTPS_PROXY = "http://127.0.0.1:$httpPort"
-$env:ALL_PROXY = "socks5://127.0.0.1:$socksPort"
+$env:HTTP_PROXY = "http://127.0.0.1:7893"
+$env:HTTPS_PROXY = "http://127.0.0.1:7893"
+$env:ALL_PROXY = "socks5://127.0.0.1:7893"
 
 # 更严谨的验证（分步排查问题）
 Write-Host "🔍 正在检测端口 $httpPort 是否被 Clash 占用..."
