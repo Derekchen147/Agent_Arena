@@ -86,13 +86,11 @@ class Orchestrator:
         # 根据 @ 结果划分：被 @ 的为 must_reply，其余为 may_reply；@all 则全员 must
         must_reply: list[str] = []
         may_reply: list[str] = []
-
         if "@all" in parsed_mentions or "@所有人" in parsed_mentions:
             must_reply = list(agent_members)
         else:
             must_reply = [m for m in parsed_mentions if m in agent_members]
             may_reply = [m for m in agent_members if m not in must_reply]
-
         if not must_reply and not may_reply:
             # 没有任何 @ 时，所有 Agent 都作为可选回复
             may_reply = list(agent_members)
@@ -232,9 +230,12 @@ class Orchestrator:
         )
 
     def _parse_mentions(self, content: str, agent_ids: list[str]) -> list[str]:
-        """从消息正文解析 @xxx：支持 @all/@所有人、agent_id 或 agent 名称匹配。"""
+        """从消息正文解析 @xxx：支持 @all/@所有人、agent_id 或 agent 名称匹配。
+        仅当 @ 出现在行首或空白后时才视为提及，避免误伤邮件、文件名等（如 user@example.com、@file.txt）。
+        """
         mentions = []
-        pattern = r"@(\S+)"
+        # 仅匹配「行首或空白后的 @xxx」，避免把 user@example.com、@orchestrator.py 等当提及
+        pattern = r"(?:^|\s)@(\S+)"
         matches = re.findall(pattern, content)
         for match in matches:
             if match in ("all", "所有人"):

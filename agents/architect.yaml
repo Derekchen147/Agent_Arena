@@ -27,8 +27,15 @@ response_config:
   response_threshold: 0.6
   priority_keywords: ["架构", "设计", "方案", "技术选型", "拆解", "需求"]
 
+# CLI 配置：调用 Claude Code CLI 时的参数与环境（如代理）
+# 启动 Claude Code CLI 前需配置代理，否则无法访问 API。可用下面两种方式之一：
+# 1) 在 agent 的 cli_config.env 里写死（如下）；2) 启动本服务前在终端先执行 ipset.ps1
 cli_config:
   cli_type: "claude"
   timeout: 300
+  env:
+    HTTP_PROXY: "http://127.0.0.1:7897"
+    HTTPS_PROXY: "http://127.0.0.1:7897"
+    ALL_PROXY: "socks5://127.0.0.1:7897"
 
 max_output_tokens: 2000

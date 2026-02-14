@@ -39,6 +39,7 @@ class WorkerRuntime:
             return ClaudeCliAdapter(
                 timeout=cli_config.get("timeout", 300),
                 extra_args=cli_config.get("extra_args", []),
+                env=cli_config.get("env"),
             )
         elif cli_type == "generic":
             return GenericCliAdapter(

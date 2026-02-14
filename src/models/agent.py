@@ -23,6 +23,8 @@ class CliConfig(BaseModel):
     command: str = ""         # generic 类型时的自定义启动命令
     timeout: int = 300        # 单次调用超时（秒）
     extra_args: list[str] = Field(default_factory=list)
+    # 调用 CLI 时注入的环境变量（如代理）。会与当前进程环境合并，同名键以此为准。
+    env: dict[str, str] = Field(default_factory=dict)
 
 
 class AgentProfile(BaseModel):

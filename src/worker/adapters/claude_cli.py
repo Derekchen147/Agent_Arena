@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 import re
 from typing import Callable
 
@@ -20,17 +21,32 @@ from src.worker.adapters.base import BaseAdapter
 logger = logging.getLogger(__name__)
 
 
+def _subprocess_env(extra_env: dict[str, str] | None) -> dict[str, str]:
+    """合并当前进程环境与 extra_env，供子进程使用（如代理）。"""
+    env = os.environ.copy()
+    if extra_env:
+        env.update(extra_env)
+    return env
+
+
 class ClaudeCliAdapter(BaseAdapter):
     """通过 Claude Code CLI 调用的 Adapter。
 
     调用方式：claude -p "prompt" --output-format json
     工作目录：Agent 的 workspace_dir
     上下文来源：workspace_dir 中的 CLAUDE.md 和其他文件
+    若需代理，在 cli_config.env 中配置 HTTP_PROXY/HTTPS_PROXY/ALL_PROXY，或启动服务前在 shell 中设置。
     """
 
-    def __init__(self, timeout: int = 300, extra_args: list[str] | None = None):
+    def __init__(
+        self,
+        timeout: int = 300,
+        extra_args: list[str] | None = None,
+        env: dict[str, str] | None = None,
+    ):
         self.timeout = timeout
         self.extra_args = extra_args or []
+        self.env = env or {}
 
     async def invoke(
         self,
@@ -46,10 +62,12 @@ class ClaudeCliAdapter(BaseAdapter):
 
         logger.info(f"Invoking Claude CLI in {workspace_dir} for agent {input.agent_id}")
 
+        run_env = _subprocess_env(self.env)
         try:
             process = await asyncio.create_subprocess_exec(
                 *cmd,
                 cwd=workspace_dir,
+                env=run_env,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
@@ -78,9 +96,11 @@ class ClaudeCliAdapter(BaseAdapter):
 
     async def health_check(self, workspace_dir: str) -> bool:
         """执行 claude --version 判断 CLI 是否可用。"""
+        run_env = _subprocess_env(self.env)
         try:
             process = await asyncio.create_subprocess_exec(
                 "claude", "--version",
+                env=run_env,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
