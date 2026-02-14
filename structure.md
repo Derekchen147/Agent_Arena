@@ -74,7 +74,26 @@ agent_arena/
 │   ├── test_registry.py
 │   └── test_workspace.py
 │
-└── frontend/                            # 前端（待开发）
+├── frontend/                            # 前端
+│   ├── index.html
+│   ├── package.json
+│   ├── vite.config.ts          # 含 API/WS 代理配置 → localhost:8000
+│   ├── tsconfig.json
+│   └── src/
+│       ├── main.tsx             # 入口
+│       ├── index.css            # 全局样式（深色主题）
+│       ├── App.tsx              # 主组件，三栏布局 + 全局状态管理
+│       ├── App.css
+│       ├── types/
+│       │   └── index.ts         # 所有 TypeScript 类型（对应后端模型）
+│       ├── api/
+│       │   └── client.ts        # REST API 客户端（群组/消息/员工 CRUD）
+│       ├── hooks/
+│       │   └── useWebSocket.ts  # WebSocket hook（实时消息 + Agent 状态）
+│       └── components/
+│           ├── GroupSidebar.tsx/css   # 左栏：群组列表 + 创建群组
+│           ├── ChatArea.tsx/css      # 中栏：消息流 + @mention 输入
+│           └── AgentPanel.tsx/css    # 右栏：员工状态 + 成员管理 + 新增员工
 ```
 
 ---

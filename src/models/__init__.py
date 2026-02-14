@@ -1,3 +1,4 @@
+"""统一导出协议、会话与 Agent 相关数据模型，供其他模块引用。"""
 from src.models.protocol import (
     AgentInput,
     AgentOutput,

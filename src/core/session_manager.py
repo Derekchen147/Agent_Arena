@@ -1,4 +1,7 @@
-"""会话管理器：管理群组、消息、成员的 CRUD 和持久化存储。"""
+"""会话管理器：管理群组、消息、成员的 CRUD 和持久化存储。
+
+纯数据层，不包含编排或业务逻辑；所有表结构由 DB_SCHEMA 定义，使用 aiosqlite 异步读写。
+"""
 
 from __future__ import annotations
 
@@ -11,6 +14,7 @@ import aiosqlite
 from src.models.protocol import Attachment, Message
 from src.models.session import Group, GroupConfig, GroupMember, StoredMessage
 
+# 数据库表结构：群组、群成员、消息；含索引以加速按 group_id / timestamp 查询
 DB_SCHEMA = """
 CREATE TABLE IF NOT EXISTS groups (
     id TEXT PRIMARY KEY,
@@ -53,25 +57,29 @@ CREATE INDEX IF NOT EXISTS idx_group_members_group_id ON group_members(group_id)
 
 
 class SessionManager:
-    """会话管理器：纯数据层，不包含业务逻辑。"""
+    """会话管理器：提供群组、成员、消息的增删改查与持久化，不包含业务编排。"""
 
     def __init__(self, db_path: str = "data/agent_arena.db"):
+        """指定 SQLite 数据库文件路径，连接在 initialize() 中建立。"""
         self.db_path = db_path
         self._db: aiosqlite.Connection | None = None
 
     async def initialize(self) -> None:
+        """连接数据库、设置 Row 工厂、执行建表脚本并提交。应用启动时调用一次。"""
         self._db = await aiosqlite.connect(self.db_path)
         self._db.row_factory = aiosqlite.Row
         await self._db.executescript(DB_SCHEMA)
         await self._db.commit()
 
     async def close(self) -> None:
+        """关闭数据库连接。应用关闭时调用。"""
         if self._db:
             await self._db.close()
 
     # ── 群组 CRUD ──
 
     async def create_group(self, name: str, description: str = "", config: GroupConfig | None = None) -> Group:
+        """创建新群组：生成 UUID、写入 groups 表并返回 Group 模型。"""
         group_id = str(uuid.uuid4())
         now = datetime.now().isoformat()
         cfg = config or GroupConfig()
@@ -83,6 +91,7 @@ class SessionManager:
         return Group(id=group_id, name=name, description=description, created_at=now, config=cfg)
 
     async def get_group(self, group_id: str) -> Group | None:
+        """根据 group_id 查询群组；若存在则附带成员列表并解析 config JSON。"""
         cursor = await self._db.execute("SELECT * FROM groups WHERE id = ?", (group_id,))
         row = await cursor.fetchone()
         if not row:
@@ -98,6 +107,7 @@ class SessionManager:
         )
 
     async def list_groups(self) -> list[Group]:
+        """列出所有群组，按创建时间倒序；每条记录均附带成员列表。"""
         cursor = await self._db.execute("SELECT * FROM groups ORDER BY created_at DESC")
         rows = await cursor.fetchall()
         groups = []
@@ -114,6 +124,7 @@ class SessionManager:
         return groups
 
     async def delete_group(self, group_id: str) -> None:
+        """删除指定群组；外键 CASCADE 会一并删除该群的消息与成员记录。"""
         await self._db.execute("DELETE FROM groups WHERE id = ?", (group_id,))
         await self._db.commit()
 
@@ -127,6 +138,7 @@ class SessionManager:
         display_name: str = "",
         role_in_group: str | None = None,
     ) -> GroupMember:
+        """向指定群组添加一名成员（人类或 Agent），写入 group_members 表并返回模型。"""
         member_id = str(uuid.uuid4())
         now = datetime.now().isoformat()
         await self._db.execute(
@@ -141,6 +153,7 @@ class SessionManager:
         )
 
     async def remove_member(self, group_id: str, member_id: str) -> None:
+        """从群组中移除指定成员；仅删除 group_members 记录，不删消息。"""
         await self._db.execute(
             "DELETE FROM group_members WHERE id = ? AND group_id = ?",
             (member_id, group_id),
@@ -148,6 +161,7 @@ class SessionManager:
         await self._db.commit()
 
     async def list_group_members(self, group_id: str) -> list[GroupMember]:
+        """按加入时间正序列出该群组所有成员。"""
         cursor = await self._db.execute(
             "SELECT * FROM group_members WHERE group_id = ? ORDER BY joined_at", (group_id,)
         )
@@ -178,6 +192,7 @@ class SessionManager:
         attachments: list[Attachment] | None = None,
         metadata: dict | None = None,
     ) -> StoredMessage:
+        """将一条消息写入 messages 表；支持 @mentions、附件与 metadata，返回 StoredMessage。"""
         msg_id = str(uuid.uuid4())
         now = datetime.now().isoformat()
         msg = StoredMessage(
@@ -210,6 +225,7 @@ class SessionManager:
     async def get_messages(
         self, group_id: str, limit: int = 50, before: str | None = None
     ) -> list[StoredMessage]:
+        """分页获取群组消息：支持 before 游标；结果按时间正序（从旧到新）。"""
         if before:
             cursor = await self._db.execute(
                 "SELECT * FROM messages WHERE group_id = ? AND timestamp < ? "
@@ -238,11 +254,11 @@ class SessionManager:
             )
             for row in rows
         ]
-        messages.reverse()  # 按时间正序返回
+        messages.reverse()  # 按时间正序返回，便于前端展示
         return messages
 
     def stored_to_protocol(self, stored: StoredMessage) -> Message:
-        """将 StoredMessage 转为 protocol.Message（供 ContextBuilder 使用）。"""
+        """将 StoredMessage 转为 protocol.Message（供 ContextBuilder 等构建对话上下文使用）。"""
         role = "user" if stored.author_type == "human" else (
             "system" if stored.author_type == "system" else "assistant"
         )

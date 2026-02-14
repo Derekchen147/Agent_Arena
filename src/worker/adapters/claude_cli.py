@@ -38,6 +38,7 @@ class ClaudeCliAdapter(BaseAdapter):
         workspace_dir: str,
         stream_callback: Callable[[str], None] | None = None,
     ) -> AgentOutput:
+        """在 workspace_dir 下执行 claude -p "prompt" --output-format json，解析 JSON 或纯文本为 AgentOutput。"""
         prompt = self._build_prompt(input)
 
         cmd = ["claude", "-p", prompt, "--output-format", "json"]
@@ -76,6 +77,7 @@ class ClaudeCliAdapter(BaseAdapter):
             return AgentOutput(content="[Error] claude 命令未找到，请确认已安装 Claude Code CLI", should_respond=True)
 
     async def health_check(self, workspace_dir: str) -> bool:
+        """执行 claude --version 判断 CLI 是否可用。"""
         try:
             process = await asyncio.create_subprocess_exec(
                 "claude", "--version",
@@ -126,33 +128,28 @@ class ClaudeCliAdapter(BaseAdapter):
         return "\n".join(parts)
 
     def _parse_output(self, raw_output: str, input: AgentInput) -> AgentOutput:
-        """解析 Claude CLI 的 JSON 输出。"""
+        """从 CLI 输出中解析正文：优先 JSON 的 result/content，再处理 SKIP 与 NEXT_MENTIONS。"""
         content = raw_output
 
-        # Claude CLI --output-format json 会输出 JSON
         try:
             data = json.loads(raw_output)
-            # claude -p 的 JSON 输出格式中，result 字段包含文本
             if isinstance(data, dict):
                 content = data.get("result", data.get("content", raw_output))
             elif isinstance(data, list):
-                # 可能是多个 content block
-                text_parts = []
-                for block in data:
-                    if isinstance(block, dict) and block.get("type") == "text":
-                        text_parts.append(block.get("text", ""))
+                text_parts = [
+                    block.get("text", "")
+                    for block in data
+                    if isinstance(block, dict) and block.get("type") == "text"
+                ]
                 content = "\n".join(text_parts) if text_parts else raw_output
         except json.JSONDecodeError:
-            # 非 JSON 输出，直接用原始文本
             content = raw_output
 
-        # 检查 SKIP
         should_respond = True
         if content.strip() == "SKIP" or content.strip().startswith("SKIP"):
             should_respond = False
             content = ""
 
-        # 提取 next_mentions
         next_mentions = []
         mention_match = re.search(r"<!--NEXT_MENTIONS:(\[.*?\])-->", content)
         if mention_match:

@@ -1,4 +1,7 @@
-"""WorkerRuntime：管理每个 Agent 的 CLI 调用，在 Agent 的工作目录中执行。"""
+"""Worker 运行时：根据 Agent 的 CLI 类型选择适配器，在其工作目录中执行并返回 AgentOutput。
+
+编排器通过 WorkerRuntime.invoke_agent 调用；状态变更可通过 ws_manager 广播给前端。
+"""
 
 from __future__ import annotations
 
@@ -19,22 +22,19 @@ logger = logging.getLogger(__name__)
 
 
 class WorkerRuntime:
-    """管理所有 Agent 的 CLI 调用。
-
-    每次调用时根据 Agent 的 cli_config 选择对应的 Adapter，
-    并在 Agent 的 workspace_dir 中执行。
-    """
+    """根据 registry 中的 Agent 配置创建对应 Adapter，在 workspace_dir 下执行并返回结果。"""
 
     def __init__(
         self,
         registry: AgentRegistry,
         ws_manager: WebSocketManager | None = None,
     ):
+        """注入注册表与可选的 WebSocket 管理器（用于推送 Agent 状态）。"""
         self.registry = registry
         self.ws_manager = ws_manager
 
     def _create_adapter(self, cli_type: str, cli_config: dict) -> BaseAdapter:
-        """根据 cli_type 创建 Adapter 实例。"""
+        """按 cli_type（claude / generic）构造对应的 Adapter，并传入超时与额外参数。"""
         if cli_type == "claude":
             return ClaudeCliAdapter(
                 timeout=cli_config.get("timeout", 300),
@@ -55,7 +55,7 @@ class WorkerRuntime:
         input: AgentInput,
         stream_callback: Callable[[str], None] | None = None,
     ) -> AgentOutput:
-        """调用一个 Agent：在其工作目录中执行 CLI。"""
+        """在指定 Agent 的工作目录中执行 CLI：选 Adapter、发状态、调用、返回解析后的 AgentOutput。"""
         profile = self.registry.get_agent(agent_id)
         workspace = Path(profile.workspace_dir).resolve()
 
@@ -81,10 +81,11 @@ class WorkerRuntime:
             raise
 
     async def shutdown(self) -> None:
-        """清理（CLI 模式下无需持久进程管理）。"""
+        """关闭时清理（当前为 CLI 模式，无持久进程，留空即可）。"""
         pass
 
     async def _emit_status(self, agent_id: str, status: str, detail: str = "") -> None:
+        """向所有 WebSocket 连接广播该 Agent 的状态（供前端展示进度）。"""
         if self.ws_manager:
             await self.ws_manager.broadcast_status(agent_id, {
                 "type": "agent_status",

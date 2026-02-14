@@ -1,10 +1,6 @@
-"""WorkspaceManager：管理 Agent 的工作目录。
+"""工作区管理：Agent 接入、工作目录创建、CLAUDE.md 与 YAML 配置写入、注册表同步。
 
-核心流程：
-1. 接入新 Agent → clone 其 GitHub 仓库到 workspaces/{agent_id}/
-2. 写入 CLAUDE.md（角色描述/上下文）到工作目录
-3. 生成 YAML 配置并注册到 AgentRegistry
-4. Agent 就绑定了这个工作目录，CLI 在里面执行
+接入流程：clone（或建空目录）→ 写 CLAUDE.md → 写 agents/{id}.yaml → registry.register。
 """
 
 from __future__ import annotations
@@ -26,7 +22,7 @@ DEFAULT_AGENTS_DIR = "agents"
 
 
 class WorkspaceManager:
-    """管理 Agent 的工作目录和接入流程。"""
+    """负责 Agent 工作目录的创建、clone、CLAUDE.md 写入、YAML 持久化与 registry 注册/注销。"""
 
     def __init__(
         self,
@@ -34,6 +30,7 @@ class WorkspaceManager:
         workspaces_dir: str = DEFAULT_WORKSPACES_DIR,
         agents_config_dir: str = DEFAULT_AGENTS_DIR,
     ):
+        """指定工作区根目录与 Agent 配置目录；工作区目录不存在时会创建。"""
         self.registry = registry
         self.workspaces_dir = Path(workspaces_dir)
         self.agents_config_dir = Path(agents_config_dir)
@@ -61,17 +58,17 @@ class WorkspaceManager:
         """
         workspace_path = self.workspaces_dir / agent_id
 
-        # 1. 准备工作目录
+        # 有 repo_url 则 clone 到 workspaces/{agent_id}，否则创建空目录
         if repo_url:
             await self._clone_repo(repo_url, workspace_path)
         else:
             workspace_path.mkdir(parents=True, exist_ok=True)
 
-        # 2. 写入 CLAUDE.md（Agent 的角色上下文）
+        # 将角色描述写入 CLAUDE.md（若已存在则不覆盖）
         if role_prompt:
             self._write_claude_md(workspace_path, role_prompt)
 
-        # 3. 构建 AgentProfile
+        # 构造 AgentProfile，指向该工作目录与 CLI 类型
         profile = AgentProfile(
             agent_id=agent_id,
             name=name,
@@ -86,26 +83,23 @@ class WorkspaceManager:
             cli_config=CliConfig(cli_type=cli_type),
         )
 
-        # 4. 保存 YAML 配置
+        # 将配置写入 agents/{agent_id}.yaml，便于重启后从磁盘加载
         self._save_agent_yaml(profile)
 
-        # 5. 注册
+        # 写入内存中的注册表，供编排与 Worker 使用
         self.registry.register_agent(profile)
 
         logger.info(f"Onboarded agent: {agent_id} ({name}) -> {workspace_path}")
         return profile
 
     async def remove_agent(self, agent_id: str, delete_workspace: bool = False) -> None:
-        """移除一个 Agent。"""
-        # 注销注册
+        """从注册表注销、删除对应 YAML 文件，并可选的删除工作目录。"""
         self.registry.unregister_agent(agent_id)
 
-        # 删除 YAML 配置
         yaml_path = self.agents_config_dir / f"{agent_id}.yaml"
         if yaml_path.exists():
             yaml_path.unlink()
 
-        # 可选：删除工作目录
         if delete_workspace:
             workspace_path = self.workspaces_dir / agent_id
             if workspace_path.exists():
@@ -115,14 +109,13 @@ class WorkspaceManager:
         logger.info(f"Removed agent: {agent_id}")
 
     async def update_workspace(self, agent_id: str) -> None:
-        """更新 Agent 的工作目录（git pull）。"""
+        """对该 Agent 的工作目录执行 git pull；非 git 目录则仅打日志不报错。"""
         profile = self.registry.get_agent(agent_id)
         workspace_path = Path(profile.workspace_dir)
 
         if not workspace_path.exists():
             raise FileNotFoundError(f"Workspace not found: {workspace_path}")
 
-        # 检查是否是 git 仓库
         git_dir = workspace_path / ".git"
         if git_dir.exists():
             process = await asyncio.create_subprocess_exec(
@@ -139,7 +132,7 @@ class WorkspaceManager:
             logger.warning(f"Workspace {workspace_path} is not a git repo, skip update")
 
     def list_workspaces(self) -> list[dict]:
-        """列出所有工作目录及其状态。"""
+        """遍历 workspaces_dir 下每个子目录，返回路径、是否 git、是否有 CLAUDE.md、是否已注册。"""
         result = []
         if not self.workspaces_dir.exists():
             return result
@@ -157,7 +150,7 @@ class WorkspaceManager:
         return result
 
     async def _clone_repo(self, repo_url: str, target_path: Path) -> None:
-        """Clone 一个 Git 仓库。"""
+        """将 repo_url clone 到 target_path；若目录已存在则执行 git pull。"""
         if target_path.exists():
             logger.warning(f"Workspace already exists: {target_path}, pulling instead")
             process = await asyncio.create_subprocess_exec(
@@ -181,9 +174,8 @@ class WorkspaceManager:
         logger.info(f"Cloned successfully: {target_path}")
 
     def _write_claude_md(self, workspace_path: Path, role_prompt: str) -> None:
-        """写入 CLAUDE.md 到工作目录（Claude CLI 会自动读取）。"""
+        """在工作目录下创建 CLAUDE.md 写入 role_prompt；若已存在则跳过避免覆盖仓库自带配置。"""
         claude_md = workspace_path / "CLAUDE.md"
-        # 如果已经存在 CLAUDE.md（比如仓库里自带的），不覆盖
         if claude_md.exists():
             logger.info(f"CLAUDE.md already exists in {workspace_path}, skipping write")
             return
@@ -191,7 +183,7 @@ class WorkspaceManager:
         logger.info(f"Wrote CLAUDE.md to {workspace_path}")
 
     def _save_agent_yaml(self, profile: AgentProfile) -> None:
-        """将 AgentProfile 保存为 YAML 文件。"""
+        """将 profile 序列化为 YAML 写入 agents_config_dir/{agent_id}.yaml。"""
         self.agents_config_dir.mkdir(parents=True, exist_ok=True)
         yaml_path = self.agents_config_dir / f"{profile.agent_id}.yaml"
 

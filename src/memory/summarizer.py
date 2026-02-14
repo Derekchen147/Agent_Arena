@@ -1,4 +1,7 @@
-"""Summarizer：摘要生成器，用于压缩历史消息。"""
+"""摘要生成器：将一段历史消息压缩为短文本，用于上下文截断或记忆。
+
+MVP 为简单按条截断前 100 字；后续可改为调用轻量模型生成高质量摘要。
+"""
 
 from __future__ import annotations
 
@@ -14,18 +17,13 @@ logger = logging.getLogger(__name__)
 
 
 class Summarizer:
-    """摘要生成器。
-
-    MVP 阶段使用简单的消息拼接方式生成摘要。
-    后期可替换为调用轻量模型（如 Haiku / GPT-4o-mini）生成高质量摘要。
-    """
+    """将多条 Message 压缩为一段摘要文本，便于注入到后续上下文中。"""
 
     async def summarize_messages(self, messages: list[Message]) -> str:
-        """将一组消息压缩为摘要。"""
+        """对每条消息取作者与内容前 100 字，拼成「## 历史摘要」格式的字符串。"""
         if not messages:
             return ""
 
-        # MVP: 简单提取每条消息的前 100 字符
         summary_parts = []
         for msg in messages:
             author = msg.author_name or msg.role

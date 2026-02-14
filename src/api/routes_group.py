@@ -1,4 +1,7 @@
-"""群组相关路由。"""
+"""群组相关路由：创建/查询/删除群组，以及成员的添加与移除。
+
+通过 app_state.session_manager 访问数据层，不直接持有 SessionManager 引用。
+"""
 
 from __future__ import annotations
 
@@ -13,23 +16,24 @@ router = APIRouter(prefix="/api/groups", tags=["groups"])
 # ── 请求/响应模型 ──
 
 class CreateGroupRequest(BaseModel):
+    """创建群组时的请求体：名称、描述与可选群组配置。"""
     name: str
     description: str = ""
     config: GroupConfig = Field(default_factory=GroupConfig)
 
 
 class AddMemberRequest(BaseModel):
+    """向群组添加成员时的请求体：指定 agent_id 及显示名、角色。"""
     agent_id: str
     display_name: str = ""
     role_in_group: str | None = None
 
 
 # ── 路由 ──
-# 注意：实际的 session_manager 依赖注入在 main.py 中配置
 
 @router.get("")
 async def list_groups():
-    """获取所有群组列表。"""
+    """获取所有群组列表，按创建时间倒序；每条包含成员列表。"""
     from src.main import app_state
     groups = await app_state.session_manager.list_groups()
     return {"groups": [g.model_dump(mode="json") for g in groups]}

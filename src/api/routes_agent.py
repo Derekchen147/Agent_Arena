@@ -1,4 +1,7 @@
-"""员工相关路由：查询、接入新 Agent、管理工作目录。"""
+"""Agent 相关路由：查询、接入新 Agent、管理工作目录与按技能搜索。
+
+所有接口通过 app_state 获取 registry / workspace_manager，避免在 main 里循环依赖。
+"""
 
 from __future__ import annotations
 
@@ -11,13 +14,13 @@ router = APIRouter(prefix="/api/agents", tags=["agents"])
 # ── 请求模型 ──
 
 class OnboardAgentRequest(BaseModel):
-    """接入新 Agent 的请求。"""
+    """接入新 Agent 的请求体：ID、名称、仓库、角色提示、技能、CLI 类型等。"""
     agent_id: str
     name: str
-    repo_url: str = ""               # Git 仓库 URL，留空则创建空工作目录
-    role_prompt: str = ""             # 角色描述，会写入 CLAUDE.md
+    repo_url: str = ""               # Git 仓库 URL，留空则只创建空工作目录
+    role_prompt: str = ""            # 角色描述，会写入工作目录下的 CLAUDE.md
     skills: list[str] = Field(default_factory=list)
-    cli_type: str = "claude"          # claude / generic
+    cli_type: str = "claude"         # claude / generic，决定用哪种 CLI 适配器
     avatar: str = ""
     priority_keywords: list[str] = Field(default_factory=list)
 
@@ -26,7 +29,7 @@ class OnboardAgentRequest(BaseModel):
 
 @router.get("")
 async def list_agents():
-    """获取所有已注册的 Agent 列表。"""
+    """获取所有已注册 Agent 的列表（从 registry 读取并序列化）。"""
     from src.main import app_state
     agents = app_state.registry.list_agents()
     return {"agents": [a.model_dump(mode="json") for a in agents]}
@@ -45,7 +48,7 @@ async def get_agent(agent_id: str):
 
 @router.post("/onboard")
 async def onboard_agent(req: OnboardAgentRequest):
-    """接入新 Agent：clone 仓库 + 初始化工作目录 + 注册。"""
+    """接入新 Agent：按 repo_url clone（或建空目录）、初始化工作区、写入配置并注册到 registry。"""
     from src.main import app_state
     try:
         profile = await app_state.workspace_manager.onboard_agent(
@@ -87,14 +90,14 @@ async def update_agent_workspace(agent_id: str):
 
 @router.get("/workspaces/list")
 async def list_workspaces():
-    """列出所有工作目录及其状态。"""
+    """列出所有 Agent 工作目录及其状态（路径、是否就绪等）。"""
     from src.main import app_state
     return {"workspaces": app_state.workspace_manager.list_workspaces()}
 
 
 @router.get("/search/skill")
 async def search_by_skill(keyword: str):
-    """按技能关键词搜索 Agent。"""
+    """按技能关键词在 registry 中搜索 Agent，返回匹配列表。"""
     from src.main import app_state
     agents = app_state.registry.find_by_skill(keyword)
     return {"agents": [a.model_dump(mode="json") for a in agents]}
@@ -102,7 +105,7 @@ async def search_by_skill(keyword: str):
 
 @router.post("/reload")
 async def reload_agents():
-    """重新加载 Agent 配置。"""
+    """从磁盘重新加载 agents 目录下的配置，更新内存中的 registry。"""
     from src.main import app_state
     app_state.registry.reload()
     return {"ok": True, "count": len(app_state.registry.agents)}
