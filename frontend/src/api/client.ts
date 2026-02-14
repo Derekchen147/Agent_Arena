@@ -1,98 +1,117 @@
-/** REST API client for Agent Arena backend. */
+import type {
+  Group,
+  StoredMessage,
+  AgentProfile,
+  CreateGroupRequest,
+  SendMessageRequest,
+  AddMemberRequest,
+  OnboardAgentRequest,
+  GroupMember,
+} from '../types';
 
-import type { Group, GroupMember, StoredMessage, AgentProfile } from "@/types/api";
+const BASE = '/api';
 
-const BASE = "";
-
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
-    ...options,
-    headers: { "Content-Type": "application/json", ...options?.headers },
+    headers: { 'Content-Type': 'application/json' },
+    ...init,
   });
   if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text || `HTTP ${res.status}`);
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail || `HTTP ${res.status}`);
   }
-  return res.json() as Promise<T>;
+  return res.json();
 }
 
-// ─── Groups ───
-export async function listGroups(): Promise<{ groups: Group[] }> {
-  return request("/api/groups");
+// ── Health ──
+
+export async function healthCheck(): Promise<{ status: string; agents_loaded: number }> {
+  return request('/health');
 }
 
-export async function getGroup(groupId: string): Promise<{ group: Group }> {
-  return request(`/api/groups/${groupId}`);
+// ── Groups ──
+
+export async function listGroups(): Promise<Group[]> {
+  const data = await request<{ groups: Group[] }>('/groups');
+  return data.groups;
 }
 
-export async function createGroup(params: {
-  name: string;
-  description?: string;
-}): Promise<{ group: Group }> {
-  return request("/api/groups", {
-    method: "POST",
-    body: JSON.stringify(params),
+export async function getGroup(groupId: string): Promise<Group> {
+  const data = await request<{ group: Group }>(`/groups/${groupId}`);
+  return data.group;
+}
+
+export async function createGroup(req: CreateGroupRequest): Promise<Group> {
+  const data = await request<{ group: Group }>('/groups', {
+    method: 'POST',
+    body: JSON.stringify(req),
   });
+  return data.group;
 }
 
-export async function deleteGroup(groupId: string): Promise<{ ok: boolean }> {
-  return request(`/api/groups/${groupId}`, { method: "DELETE" });
+export async function deleteGroup(groupId: string): Promise<void> {
+  await request(`/groups/${groupId}`, { method: 'DELETE' });
 }
 
-export async function addMember(
-  groupId: string,
-  params: { agent_id: string; display_name?: string; role_in_group?: string }
-): Promise<{ member: GroupMember }> {
-  return request(`/api/groups/${groupId}/members`, {
-    method: "POST",
-    body: JSON.stringify(params),
+export async function addMember(groupId: string, req: AddMemberRequest): Promise<GroupMember> {
+  const data = await request<{ member: GroupMember }>(`/groups/${groupId}/members`, {
+    method: 'POST',
+    body: JSON.stringify(req),
   });
+  return data.member;
 }
 
-export async function removeMember(groupId: string, memberId: string): Promise<{ ok: boolean }> {
-  return request(`/api/groups/${groupId}/members/${memberId}`, { method: "DELETE" });
+export async function removeMember(groupId: string, memberId: string): Promise<void> {
+  await request(`/groups/${groupId}/members/${memberId}`, { method: 'DELETE' });
 }
 
-// ─── Messages ───
+// ── Messages ──
+
 export async function getMessages(
   groupId: string,
-  opts?: { limit?: number; before?: string }
-): Promise<{ messages: StoredMessage[] }> {
-  const params = new URLSearchParams();
-  if (opts?.limit != null) params.set("limit", String(opts.limit));
-  if (opts?.before) params.set("before", opts.before);
-  const q = params.toString();
-  return request(`/api/messages/${groupId}${q ? `?${q}` : ""}`);
+  limit = 50,
+  before?: string,
+): Promise<StoredMessage[]> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (before) params.set('before', before);
+  const data = await request<{ messages: StoredMessage[] }>(
+    `/messages/${groupId}?${params}`,
+  );
+  return data.messages;
 }
 
-export async function sendMessage(params: {
-  group_id: string;
-  content: string;
-  author_id?: string;
-  author_name?: string;
-  mentions?: string[];
-}): Promise<{ message: StoredMessage; status: string }> {
-  return request("/api/messages/send", {
-    method: "POST",
-    body: JSON.stringify({
-      group_id: params.group_id,
-      content: params.content,
-      author_id: params.author_id ?? "human",
-      author_name: params.author_name ?? "用户",
-      mentions: params.mentions ?? [],
-    }),
+export async function sendMessage(req: SendMessageRequest): Promise<StoredMessage> {
+  const data = await request<{ message: StoredMessage }>('/messages/send', {
+    method: 'POST',
+    body: JSON.stringify(req),
   });
+  return data.message;
 }
 
-// ─── Agents ───
-export async function listAgents(): Promise<{ agents: AgentProfile[] }> {
-  return request("/api/agents");
+// ── Agents ──
+
+export async function listAgents(): Promise<AgentProfile[]> {
+  const data = await request<{ agents: AgentProfile[] }>('/agents');
+  return data.agents;
 }
 
-export async function getAgent(agentId: string): Promise<{ agent: AgentProfile }> {
-  return request(`/api/agents/${agentId}`);
+export async function getAgent(agentId: string): Promise<AgentProfile> {
+  const data = await request<{ agent: AgentProfile }>(`/agents/${agentId}`);
+  return data.agent;
 }
 
-export async function searchAgentsBySkill(keyword: string): Promise<{ agents: AgentProfile[] }> {
-  return request(`/api/agents/search/skill?keyword=${encodeURIComponent(keyword)}`);
+export async function onboardAgent(req: OnboardAgentRequest): Promise<AgentProfile> {
+  const data = await request<{ agent: AgentProfile }>('/agents/onboard', {
+    method: 'POST',
+    body: JSON.stringify(req),
+  });
+  return data.agent;
+}
+
+export async function deleteAgent(agentId: string): Promise<void> {
+  await request(`/agents/${agentId}`, { method: 'DELETE' });
+}
+
+export async function reloadAgents(): Promise<{ ok: boolean; count: number }> {
+  return request('/agents/reload', { method: 'POST' });
 }

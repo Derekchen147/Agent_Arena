@@ -8,7 +8,11 @@
       "Bash($PYTHON -c \"import pydantic; print\\(''pydantic:'', pydantic.__version__\\)\")",
       "Bash($PYTHON -c \"import fastapi; print\\(''fastapi:'', fastapi.__version__\\)\")",
       "Bash($PYTHON -c \"import yaml; print\\(''pyyaml: OK''\\)\")",
-      "Bash($PYTHON -c \"import aiosqlite; print\\(''aiosqlite: OK''\\)\")"
+      "Bash($PYTHON -c \"import aiosqlite; print\\(''aiosqlite: OK''\\)\")",
+      "Bash(npm create:*)",
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run build:*)"
     ]
   }
 }
