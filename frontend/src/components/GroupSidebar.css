@@ -1,0 +1,6 @@
+.sidebar .empty-state {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}

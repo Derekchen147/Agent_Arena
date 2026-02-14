@@ -1,0 +1,9 @@
+.agent-card.in-group {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.agent-skills {
+  font-size: 12px;
+  color: var(--text-muted);
+}

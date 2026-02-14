@@ -1,0 +1,5 @@
+.modal-error {
+  font-size: 13px;
+  color: var(--error);
+  margin-top: 8px;
+}
