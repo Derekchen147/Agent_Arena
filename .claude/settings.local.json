@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(/c/Users/33511/anaconda3/python.exe:*)",
+      "Bash(/c/ProgramData/anaconda3/python.exe:*)",
+      "Bash(/c/Users/33511/miniconda3/python.exe:*)",
+      "Bash(PYTHON=/c/Users/33511/miniconda3/python.exe:*)",
+      "Bash($PYTHON -c \"import pydantic; print\\(''pydantic:'', pydantic.__version__\\)\")",
+      "Bash($PYTHON -c \"import fastapi; print\\(''fastapi:'', fastapi.__version__\\)\")",
+      "Bash($PYTHON -c \"import yaml; print\\(''pyyaml: OK''\\)\")",
+      "Bash($PYTHON -c \"import aiosqlite; print\\(''aiosqlite: OK''\\)\")"
+    ]
+  }
+}

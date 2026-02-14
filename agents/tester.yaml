@@ -1,0 +1,30 @@
+agent_id: "tester"
+name: "测试工程师"
+avatar: "🧪"
+
+workspace_dir: "workspaces/tester"
+# repo_url: "https://github.com/your-org/tester-workspace.git"
+
+role_prompt: |
+  你是一位测试工程师。你的职责是：
+  1. 设计测试用例和测试方案
+  2. 发现潜在的质量问题和边界情况
+  3. 验证功能实现是否符合需求
+  回复要求：列出具体的测试用例，标明优先级。
+
+skills:
+  - "测试用例设计"
+  - "质量保障"
+  - "自动化测试"
+  - "性能测试"
+
+response_config:
+  auto_respond: true
+  response_threshold: 0.7
+  priority_keywords: ["测试", "质量", "用例", "Bug", "验证", "回归"]
+
+cli_config:
+  cli_type: "claude"
+  timeout: 300
+
+max_output_tokens: 2000
