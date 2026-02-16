@@ -27,15 +27,15 @@ response_config:
   response_threshold: 0.6
   priority_keywords: ["架构", "设计", "方案", "技术选型", "拆解", "需求"]
 
-# CLI 配置：调用 Claude Code CLI 时的参数与环境（如代理）
-# 启动 Claude Code CLI 前需配置代理，否则无法访问 API。可用下面两种方式之一：
-# 1) 在 agent 的 cli_config.env 里写死（如下）；2) 启动本服务前在终端先执行 ipset.ps1
+# CLI 配置（Cursor）：若报「agent 命令未找到」，请在「能执行 agent 的终端」里运行 where agent（PowerShell 用 (Get-Command agent).Source），把得到的路径填到 command
 cli_config:
-  cli_type: "claude"
+  cli_type: "cursor"
+  # command: "agent"   # 默认；若 uvicorn 的 PATH 里没有 agent，改为完整路径，例如：
+  # command: "C:/Users/你的用户名/AppData/Local/Programs/cursor-agent/agent.exe"
   timeout: 300
-  env:
-    HTTP_PROXY: "http://127.0.0.1:7897"
-    HTTPS_PROXY: "http://127.0.0.1:7897"
-    ALL_PROXY: "socks5://127.0.0.1:7897"
+  # 需要代理时再写 env
+  # env:
+  #   HTTP_PROXY: "http://127.0.0.1:7897"
+  #   HTTPS_PROXY: "http://127.0.0.1:7897"
 
 max_output_tokens: 2000

@@ -8,9 +8,15 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
+import sys
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+
+# Windows 上默认的 SelectorEventLoop 不支持 create_subprocess_exec，必须用 ProactorEventLoop
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -159,19 +165,30 @@ async def websocket_endpoint(websocket: WebSocket, group_id: str):
             data = await websocket.receive_json()
             # 仅处理「发送消息」类型：先持久化，再交给编排器驱动 Agent 回复
             if data.get("type") == "send_message":
+                content = data.get("content", "")
+                author_id = data.get("author_id", "human")
+                mentions = data.get("mentions", [])
+                logger.info(
+                    "[CALL] WebSocket send_message: group_id=%s author_id=%s content_len=%d mentions=%s",
+                    group_id,
+                    author_id,
+                    len(content),
+                    mentions,
+                )
                 await app_state.session_manager.save_message(
                     group_id=group_id,
-                    author_id=data.get("author_id", "human"),
-                    content=data.get("content", ""),
+                    author_id=author_id,
+                    content=content,
                     author_type="human",
                     author_name=data.get("author_name", "用户"),
-                    mentions=data.get("mentions", []),
+                    mentions=mentions,
                 )
+                logger.info("[CALL] WebSocket: triggering orchestrator.on_new_message")
                 await app_state.orchestrator.on_new_message(
                     group_id=group_id,
-                    message_content=data.get("content", ""),
-                    author_id=data.get("author_id", "human"),
-                    mentions=data.get("mentions", []),
+                    message_content=content,
+                    author_id=author_id,
+                    mentions=mentions,
                 )
     except WebSocketDisconnect:
         await app_state.ws_manager.disconnect(websocket, group_id)

@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 from typing import TYPE_CHECKING, Literal
 
@@ -15,6 +16,8 @@ if TYPE_CHECKING:
     from src.core.session_manager import SessionManager
     from src.memory.store import MemoryStore
     from src.registry.agent_registry import AgentRegistry
+
+logger = logging.getLogger(__name__)
 
 
 class ContextBuilder:
@@ -40,6 +43,14 @@ class ContextBuilder:
         mentioned_by: str | None = None,
     ) -> AgentInput:
         """为指定 Agent 组装一次调用的完整输入：角色、历史、记忆、参数等。"""
+        logger.info(
+            "[CALL] context_builder.build_input: agent_id=%s session_id=%s turn_id=%s invocation=%s mentioned_by=%s",
+            agent_id,
+            session_id,
+            turn_id,
+            invocation,
+            mentioned_by,
+        )
         # 从注册表取该 Agent 的配置（角色提示、最大 token 等）
         profile = self.registry.get_agent(agent_id)
 
@@ -48,14 +59,22 @@ class ContextBuilder:
             session_id,
             max_messages=50,  # MVP：简单按条数截断
         )
+        logger.info(
+            "[CALL] context_builder: fetched history messages_count=%s",
+            len(messages),
+        )
 
         # 若有记忆存储，用最近一条消息做查询，取相关记忆片段拼成字符串
         memory_context = None
         if self.memory_store:
             memory_context = await self._retrieve_memory(session_id, messages)
+        logger.info(
+            "[CALL] context_builder: memory_context=%s",
+            "present" if memory_context else "none",
+        )
 
         # 拼成 AgentInput 返回给编排器调用
-        return AgentInput(
+        agent_input = AgentInput(
             session_id=session_id,
             turn_id=turn_id or str(uuid.uuid4()),
             agent_id=agent_id,
@@ -67,6 +86,19 @@ class ContextBuilder:
             max_output_tokens=profile.max_output_tokens,
             prefer_concise=True,
         )
+        logger.info(
+            "[CALL] context_builder: AgentInput assembled for %s: session_id=%s turn_id=%s invocation=%s "
+            "messages=%d role_prompt_len=%d memory_len=%s max_output_tokens=%s",
+            agent_id,
+            agent_input.session_id,
+            agent_input.turn_id,
+            agent_input.invocation,
+            len(agent_input.messages),
+            len(agent_input.role_prompt or ""),
+            len(agent_input.memory_context or ""),
+            agent_input.max_output_tokens,
+        )
+        return agent_input
 
     async def _get_truncated_history(
         self, session_id: str, max_messages: int = 50

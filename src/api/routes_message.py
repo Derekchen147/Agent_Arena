@@ -6,11 +6,13 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/api/messages", tags=["messages"])
+logger = logging.getLogger(__name__)
 
 
 class SendMessageRequest(BaseModel):
@@ -37,6 +39,13 @@ async def send_message(req: SendMessageRequest):
     """发送一条人类消息：落库 → WebSocket 广播 → 异步触发编排（Agent 回复在后台进行）。"""
     from src.main import app_state
 
+    logger.info(
+        "[CALL] API send_message: group_id=%s author_id=%s content_len=%d mentions=%s",
+        req.group_id,
+        req.author_id,
+        len(req.content),
+        req.mentions,
+    )
     # 将人类消息写入 messages 表，得到 StoredMessage
     stored = await app_state.session_manager.save_message(
         group_id=req.group_id,
@@ -54,6 +63,7 @@ async def send_message(req: SendMessageRequest):
     })
 
     # 不等待编排完成，直接返回；编排在后台执行并会再次通过 WS 推送 Agent 回复
+    logger.info("[CALL] API send_message: triggering orchestrator.on_new_message (async)")
     asyncio.create_task(
         app_state.orchestrator.on_new_message(
             group_id=req.group_id,

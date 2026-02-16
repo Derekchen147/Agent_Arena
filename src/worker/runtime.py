@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Callable
 from src.models.protocol import AgentInput, AgentOutput
 from src.worker.adapters.base import BaseAdapter
 from src.worker.adapters.claude_cli import ClaudeCliAdapter
+from src.worker.adapters.cursor_cli import CursorCliAdapter
 from src.worker.adapters.generic_cli import GenericCliAdapter
 
 if TYPE_CHECKING:
@@ -34,9 +35,16 @@ class WorkerRuntime:
         self.ws_manager = ws_manager
 
     def _create_adapter(self, cli_type: str, cli_config: dict) -> BaseAdapter:
-        """按 cli_type（claude / generic）构造对应的 Adapter，并传入超时与额外参数。"""
+        """按 cli_type（claude / cursor / generic）构造对应的 Adapter，并传入超时与额外参数。"""
         if cli_type == "claude":
             return ClaudeCliAdapter(
+                timeout=cli_config.get("timeout", 300),
+                extra_args=cli_config.get("extra_args", []),
+                env=cli_config.get("env"),
+            )
+        elif cli_type == "cursor":
+            return CursorCliAdapter(
+                command=cli_config.get("command") or "agent",
                 timeout=cli_config.get("timeout", 300),
                 extra_args=cli_config.get("extra_args", []),
                 env=cli_config.get("env"),
@@ -57,11 +65,22 @@ class WorkerRuntime:
         stream_callback: Callable[[str], None] | None = None,
     ) -> AgentOutput:
         """在指定 Agent 的工作目录中执行 CLI：选 Adapter、发状态、调用、返回解析后的 AgentOutput。"""
+        logger.info(
+            "[CALL] worker_runtime.invoke_agent: agent_id=%s session_id=%s turn_id=%s invocation=%s",
+            agent_id,
+            input.session_id,
+            input.turn_id,
+            input.invocation,
+        )
         profile = self.registry.get_agent(agent_id)
         workspace = Path(profile.workspace_dir).resolve()
 
         if not workspace.exists():
-            logger.error(f"Workspace not found for agent {agent_id}: {workspace}")
+            logger.error(
+                "[CALL] Workspace not found for agent %s: %s",
+                agent_id,
+                workspace,
+            )
             return AgentOutput(
                 content=f"[Error] 工作目录不存在: {workspace}",
                 should_respond=True,
@@ -71,13 +90,29 @@ class WorkerRuntime:
             profile.cli_config.cli_type,
             profile.cli_config.model_dump(),
         )
+        logger.info(
+            "[CALL] worker_runtime: adapter_type=%s workspace=%s passing to adapter.invoke",
+            profile.cli_config.cli_type,
+            workspace,
+        )
 
         try:
             await self._emit_status(agent_id, "analyzing", "正在分析消息...")
             output = await adapter.invoke(input, str(workspace), stream_callback)
             await self._emit_status(agent_id, "done")
+            logger.info(
+                "[CALL] worker_runtime: agent %s completed output_len=%s",
+                agent_id,
+                len(output.content or ""),
+            )
             return output
         except Exception as e:
+            logger.error(
+                "[CALL] worker_runtime: agent %s raised: %s",
+                agent_id,
+                e,
+                exc_info=True,
+            )
             await self._emit_status(agent_id, "error", str(e))
             raise
 
