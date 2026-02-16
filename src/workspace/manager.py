@@ -1,6 +1,11 @@
-"""工作区管理：Agent 接入、工作目录创建、CLAUDE.md 与 YAML 配置写入、注册表同步。
+"""工作区管理：Agent 接入、工作目录创建、角色配置写入、YAML 持久化与注册表同步。
 
-接入流程：clone（或建空目录）→ 写 CLAUDE.md → 写 agents/{id}.yaml → registry.register。
+接入流程：clone（或建空目录）→ 按 CLI 类型写角色配置 → 写 agents/{id}.yaml → registry.register。
+
+角色/System Prompt 约定：
+- Claude CLI：工作目录下的 CLAUDE.md 作为该 Agent 的上下文与角色定义。
+- Cursor CLI：工作目录下的 .cursor/rules/ 与 AGENTS.md 作为持久化规则（相当于 system prompt）；
+  本模块会为 cursor 类型写入 .cursor/rules/role.mdc（alwaysApply），便于角色扮演与背景信息生效。
 """
 
 from __future__ import annotations
@@ -64,9 +69,12 @@ class WorkspaceManager:
         else:
             workspace_path.mkdir(parents=True, exist_ok=True)
 
-        # 将角色描述写入 CLAUDE.md（若已存在则不覆盖）
+        # 按 CLI 类型写入角色配置（若文件已存在则不覆盖，避免覆盖仓库自带配置）
         if role_prompt:
-            self._write_claude_md(workspace_path, role_prompt)
+            if cli_type == "cursor":
+                self._write_cursor_role_rule(workspace_path, role_prompt)
+            else:
+                self._write_claude_md(workspace_path, role_prompt)
 
         # 构造 AgentProfile，指向该工作目录与 CLI 类型
         profile = AgentProfile(
@@ -181,6 +189,28 @@ class WorkspaceManager:
             return
         claude_md.write_text(role_prompt, encoding="utf-8")
         logger.info(f"Wrote CLAUDE.md to {workspace_path}")
+
+    def _write_cursor_role_rule(self, workspace_path: Path, role_prompt: str) -> None:
+        """为 Cursor CLI 在工作目录下写入 .cursor/rules/role.mdc，作为始终生效的角色/背景（system prompt）。
+
+        Cursor 在 workspace_dir 下执行 agent 时会自动加载 .cursor/rules/*.mdc 与 AGENTS.md，
+        alwaysApply: true 使该规则在每次对话中都被注入，从而实现明确的角色扮演与背景信息。
+        """
+        rules_dir = workspace_path / ".cursor" / "rules"
+        rule_path = rules_dir / "role.mdc"
+        if rule_path.exists():
+            logger.info(f".cursor/rules/role.mdc already exists in {workspace_path}, skipping write")
+            return
+        rules_dir.mkdir(parents=True, exist_ok=True)
+        content = (
+            "---\n"
+            "description: Agent role and background (always applied)\n"
+            "alwaysApply: true\n"
+            "---\n\n"
+            f"{role_prompt}"
+        )
+        rule_path.write_text(content, encoding="utf-8")
+        logger.info(f"Wrote .cursor/rules/role.mdc to {workspace_path}")
 
     def _save_agent_yaml(self, profile: AgentProfile) -> None:
         """将 profile 序列化为 YAML 写入 agents_config_dir/{agent_id}.yaml。"""
