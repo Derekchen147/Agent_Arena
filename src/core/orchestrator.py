@@ -70,30 +70,51 @@ class Orchestrator:
         mentions: list[str] | None = None,
     ) -> None:
         """处理新消息：查群组与成员、解析 @mention、划分 must/may_reply，创建并执行 Turn。"""
+        logger.info(
+            "[CALL] on_new_message: group_id=%s author_id=%s content_len=%d content_preview=%s",
+            group_id, author_id, len(message_content),
+            (message_content[:80] + "…") if len(message_content) > 80 else message_content,
+        )
         # 获取群组及其配置，用于本回合超时、人数上限等
         group = await self.session_manager.get_group(group_id)
         if not group:
-            logger.error(f"Group {group_id} not found")
+            logger.error("[CALL] Group not found: group_id=%s", group_id)
             return
         config = group.config
 
         # 收集该群内所有 Agent 成员 ID，用于后续划分回复名单
         agent_members = [m.agent_id for m in group.members if m.type == "agent" and m.agent_id]
+        logger.info(
+            "[CALL] Group resolved: agent_members=%s",
+            agent_members,
+        )
 
         # 若前端未传 mentions，则从消息正文解析 @xxx
         parsed_mentions = mentions or self._parse_mentions(message_content, agent_members)
+        logger.info(
+            "[CALL] Mention resolution: frontend_mentions=%s parsed_mentions=%s (from content)",
+            mentions,
+            parsed_mentions,
+        )
 
         # 根据 @ 结果划分：被 @ 的为 must_reply，其余为 may_reply；@all 则全员 must
         must_reply: list[str] = []
         may_reply: list[str] = []
         if "@all" in parsed_mentions or "@所有人" in parsed_mentions:
             must_reply = list(agent_members)
+            logger.info("[CALL] @all/所有人 → must_reply = all agents: %s", must_reply)
         else:
             must_reply = [m for m in parsed_mentions if m in agent_members]
             may_reply = [m for m in agent_members if m not in must_reply]
+            logger.info(
+                "[CALL] Judged: must_reply=%s may_reply=%s",
+                must_reply,
+                may_reply,
+            )
         if not must_reply and not may_reply:
             # 没有任何 @ 时，所有 Agent 都作为可选回复
             may_reply = list(agent_members)
+            logger.info("[CALL] No mentions → all as may_reply: %s", may_reply)
 
         # 构造本回合并交给执行器
         turn = Turn(
@@ -104,16 +125,34 @@ class Orchestrator:
             timeout_seconds=config.turn_timeout_seconds,
             chain_depth=0,
         )
+        logger.info(
+            "[CALL] Turn created: turn_id=%s trigger_source=%s must_reply_agents=%s may_reply_agents=%s max_responders=%s",
+            turn.turn_id,
+            turn.trigger_source,
+            turn.must_reply_agents,
+            turn.may_reply_agents,
+            turn.max_responders,
+        )
 
         await self.execute_turn(turn, group_id, config)
 
     async def execute_turn(self, turn: Turn, group_id: str, config: GroupConfig) -> None:
         """执行一个完整回合：先并行执行 must_reply，再并行执行 may_reply（按名额），最后处理链式 @。"""
+        logger.info(
+            "[CALL] execute_turn: turn_id=%s group_id=%s chain_depth=%s",
+            turn.turn_id,
+            group_id,
+            turn.chain_depth,
+        )
         all_next_mentions: set[str] = set()   # 本回合内所有 Agent 输出的 next_mentions 并集
         replied_agents: set[str] = set()      # 本回合已回复的 Agent，避免重复
 
         # Phase A：被 @ 的 Agent 必须回复，并行调用
         if turn.must_reply_agents:
+            logger.info(
+                "[CALL] Phase A (must_reply) start: agents=%s",
+                turn.must_reply_agents,
+            )
             must_tasks = [
                 self._invoke_one(agent_id, group_id, "must_reply", turn)
                 for agent_id in turn.must_reply_agents
@@ -122,7 +161,12 @@ class Orchestrator:
 
             for agent_id, result in zip(turn.must_reply_agents, must_results):
                 if isinstance(result, Exception):
-                    logger.error(f"Agent {agent_id} failed: {result}")
+                    logger.error(
+                        "[CALL] Agent %s failed: %s",
+                        agent_id,
+                        result,
+                        exc_info=True,
+                    )
                     continue
                 output: AgentOutput = result
                 # 将 Agent 回复落库并写入 turn_id、next_mentions
@@ -145,6 +189,11 @@ class Orchestrator:
                     })
                 all_next_mentions.update(output.next_mentions)
                 replied_agents.add(agent_id)
+            logger.info(
+                "[CALL] Phase A (must_reply) done: replied=%s next_mentions=%s",
+                list(replied_agents),
+                list(all_next_mentions),
+            )
 
         # Phase B：可选回复的 Agent，在剩余名额内并行调用；仅当 should_respond 为 True 时落库与推送
         remaining = turn.max_responders - len(replied_agents)
@@ -153,6 +202,11 @@ class Orchestrator:
                 aid for aid in turn.may_reply_agents
                 if aid not in replied_agents
             ][:remaining]
+            logger.info(
+                "[CALL] Phase B (may_reply) start: remaining_slots=%s may_agents=%s",
+                remaining,
+                may_agents,
+            )
 
             may_tasks = [
                 self._invoke_one(agent_id, group_id, "may_reply", turn)
@@ -162,7 +216,12 @@ class Orchestrator:
 
             for agent_id, result in zip(may_agents, may_results):
                 if isinstance(result, Exception):
-                    logger.error(f"Agent {agent_id} (may_reply) failed: {result}")
+                    logger.error(
+                        "[CALL] Agent %s (may_reply) failed: %s",
+                        agent_id,
+                        result,
+                        exc_info=True,
+                    )
                     continue
                 output: AgentOutput = result
                 if not output.should_respond:
@@ -217,12 +276,26 @@ class Orchestrator:
         self, agent_id: str, group_id: str, invocation: str, turn: Turn
     ) -> AgentOutput:
         """调用单个 Agent：先构建 AgentInput，再通过 worker_runtime 执行，带超时。"""
+        logger.info(
+            "[CALL] _invoke_one: agent_id=%s group_id=%s invocation=%s turn_id=%s",
+            agent_id,
+            group_id,
+            invocation,
+            turn.turn_id,
+        )
         agent_input = await self.context_builder.build_input(
             agent_id=agent_id,
             session_id=group_id,
             turn_id=turn.turn_id,
             invocation=invocation,
             mentioned_by=turn.trigger_source,
+        )
+        logger.info(
+            "[CALL] AgentInput built for %s: messages=%d role_prompt_len=%d memory=%s",
+            agent_id,
+            len(agent_input.messages),
+            len(agent_input.role_prompt or ""),
+            "yes" if agent_input.memory_context else "no",
         )
         return await asyncio.wait_for(
             self.worker_runtime.invoke_agent(agent_id, agent_input),

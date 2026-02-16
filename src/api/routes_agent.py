@@ -20,7 +20,7 @@ class OnboardAgentRequest(BaseModel):
     repo_url: str = ""               # Git 仓库 URL，留空则只创建空工作目录
     role_prompt: str = ""            # 角色描述，会写入工作目录下的 CLAUDE.md
     skills: list[str] = Field(default_factory=list)
-    cli_type: str = "claude"         # claude / generic，决定用哪种 CLI 适配器
+    cli_type: str = "claude"         # claude / cursor / generic，决定用哪种 CLI 适配器
     avatar: str = ""
     priority_keywords: list[str] = Field(default_factory=list)
 

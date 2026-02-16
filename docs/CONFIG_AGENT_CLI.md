@@ -1,13 +1,23 @@
-# 配置可运行的 Agent CLI（含 Claude Code 与代理）
+# 配置可运行的 Agent CLI（Claude / Cursor / Generic）
 
-本文说明如何把**本地已启动的 Claude Code CLI** 接入 Agent Arena，完成真实的输入输出。
+本文说明如何把**本地 CLI**（Claude Code CLI 或 Cursor CLI）接入 Agent Arena，完成真实的输入输出。
 
 ---
 
-## 一、前置条件
+## 一、前置条件（按所选 CLI 类型）
+
+### 使用 Claude Code CLI 时
 
 1. **已安装 Claude Code CLI**，且 `claude` 在系统 PATH 中（在终端能直接执行 `claude --version`）。
 2. **代理**：若你通过代理访问 Claude API，需要让「调用 CLI 的子进程」也走代理（见下文）。
+
+### 使用 Cursor CLI 时
+
+1. **已安装 Cursor CLI**，且 `agent` 在系统 PATH 中。安装方式：
+   - macOS/Linux/WSL: `curl https://cursor.com/install -fsS | bash`
+   - Windows: 见 [Cursor CLI 文档](https://cursor.com/docs/cli/installation)
+2. 已配置 CURSOR_API_KEY 或在 Cursor 中登录，保证 headless 调用可用。
+3. 无需代理即可使用（若你本地 Cursor 需代理，可在 `cli_config.env` 中配置）。
 
 ---
 
@@ -87,7 +97,7 @@ cli_config:
 
 | 项目 | 说明 |
 |------|------|
-| **CLI 命令** | 系统在 Agent 的 `workspace_dir` 下执行 `claude -p "..." --output-format json`，无需你手动起 CLI 进程。 |
+| **CLI 命令** | **Claude**：在 `workspace_dir` 下执行 `claude -p "..." --output-format json`。**Cursor**：执行 `agent -p "..." --output-format json`。无需你手动起 CLI 进程。 |
 | **代理** | 方式 A：启动 uvicorn 前在同一终端执行 ipset（或设 HTTP_PROXY/HTTPS_PROXY/ALL_PROXY）；方式 B：在 `agents/xxx.yaml` 的 `cli_config.env` 里配置。 |
 | **workspace** | 每个 Agent 对应 `workspaces/<agent_id>`，且目录内需有 `CLAUDE.md`。 |
 | **端口** | 代理端口与 ipset 中一致（如 7897）。 |
@@ -107,4 +117,33 @@ cli_config:
 
 ---
 
-**说明**：你本地「正在运行的 Claude Code CLI」一般是交互式会话；Agent Arena 是**按需在后台用 subprocess 执行** `claude -p "..."`，两者可并存。只要 `claude` 在 PATH 且代理正确，即可完成接入。
+**说明**：你本地「正在运行的 Claude Code CLI」一般是交互式会话；Agent Arena 是**按需在后台用 subprocess 执行** `claude -p "..."` 或 `agent -p "..."`，两者可并存。只要对应命令在 PATH 且代理（若需要）正确，即可完成接入。
+
+---
+
+## 六、使用 Cursor CLI（cli_type: cursor）
+
+若 Claude 网络不稳定，可改用 **Cursor Headless CLI**，在 Agent 的 YAML 里设置：
+
+```yaml
+cli_config:
+  cli_type: "cursor"
+  # command: "agent"   # 默认；若报「agent 命令未找到」见下文
+  timeout: 300
+  # 可选：extra_args: ["--force"]   # 允许直接改文件
+  # 可选：env: { HTTP_PROXY: "http://127.0.0.1:7897", ... }
+```
+
+- 系统会在 Agent 的 `workspace_dir` 下执行 `agent -p "..." --output-format json`。
+- 角色/规则可由 workspace 下的 `.cursor/rules` 提供，或由系统通过 prompt 注入 `role_prompt`。
+- 安装 Cursor CLI 后确保终端里能执行 `agent`（或 `agent --version`）。
+
+### 报「agent 命令未找到」时
+
+uvicorn 进程的 **PATH 环境变量** 可能和你当前终端不一样（例如 Cursor 终端里能跑 `agent`，但 uvicorn 是别的终端启动的）。两种做法任选一：
+
+1. **用完整路径**：在「能执行 agent 的终端」里查路径并写到配置里。
+   - PowerShell: `(Get-Command agent).Source`
+   - CMD: `where agent`
+   把得到的路径（如 `C:\Users\你\AppData\Local\Programs\cursor-agent\agent.exe`）填到 `cli_config.command`。
+2. **同一终端启动**：在「能执行 `agent` 的那个终端」里启动 uvicorn（`uvicorn src.main:app --reload`），这样进程会继承该终端的 PATH。
