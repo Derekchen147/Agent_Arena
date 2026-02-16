@@ -1,6 +1,11 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import type { StoredMessage, AgentProfile, Group } from '../types';
 import { getMessages } from '../api/client';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import './ChatArea.css';
 
 interface Props {
@@ -141,19 +146,70 @@ export default function ChatArea({
     return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
   };
 
-  const renderContent = (content: string): React.ReactNode => {
-    // Highlight @mentions and render code blocks
-    const parts = content.split(/(@\S+)/g);
-    return parts.map((part, i) => {
-      if (part.startsWith('@')) {
-        return (
-          <span key={i} className="mention-tag">
-            {part}
-          </span>
-        );
+  const markdownComponents = useMemo(() => ({
+    // Custom code block with syntax highlighting
+    code({ className, children, ...props }: React.ComponentProps<'code'> & { inline?: boolean }) {
+      const match = /language-(\w+)/.exec(className || '');
+      const codeString = String(children).replace(/\n$/, '');
+      // Inline code vs block code: block code lives inside <pre>
+      const isInline = !className && !codeString.includes('\n');
+      if (isInline) {
+        return <code className="inline-code" {...props}>{children}</code>;
       }
-      return part;
-    });
+      return (
+        <SyntaxHighlighter
+          style={oneLight}
+          language={match?.[1] || 'text'}
+          PreTag="div"
+          customStyle={{ margin: 0, borderRadius: '8px', fontSize: '13px' }}
+        >
+          {codeString}
+        </SyntaxHighlighter>
+      );
+    },
+    // Open links in new tab
+    a({ children, ...props }: React.ComponentProps<'a'>) {
+      return <a {...props} target="_blank" rel="noopener noreferrer">{children}</a>;
+    },
+  }), []);
+
+  const renderContent = (content: string, authorType: string): React.ReactNode => {
+    // Human messages: simple rendering; Agent messages: full markdown
+    if (authorType === 'human') {
+      const parts = content.split(/(@\S+)/g);
+      return parts.map((part, i) => {
+        if (part.startsWith('@')) {
+          return (
+            <span key={i} className="mention-tag">
+              {part}
+            </span>
+          );
+        }
+        return part;
+      });
+    }
+
+    // Normalize whitespace: collapse 3+ newlines to 2 to avoid huge gaps in markdown
+    const normalized = content
+      .trim()
+      .replace(/\n{3,}/g, '\n\n');
+    const processed = normalized.replace(
+      /@(\S+)/g,
+      '<span class="mention-tag">@$1</span>',
+    );
+
+    return (
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        allowedElements={undefined}
+        unwrapDisallowed={false}
+        skipHtml={false}
+        rehypePlugins={[rehypeRaw]}
+        components={markdownComponents}
+      >
+        {processed}
+      </ReactMarkdown>
+    );
   };
 
   if (!group) {
@@ -185,16 +241,24 @@ export default function ChatArea({
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`message ${msg.author_type === 'human' ? 'human' : ''} ${msg.author_type === 'system' ? 'system' : ''}`}
+            className={`message ${msg.author_type}`}
           >
-            <div className="message-avatar">{getAuthorAvatar(msg)}</div>
-            <div className="message-body">
-              <div className="message-header">
-                <span className="message-author">{msg.author_name}</span>
-                <span className="message-time">{formatTime(msg.timestamp)}</span>
-              </div>
-              <div className="message-content">{renderContent(msg.content)}</div>
-            </div>
+            {msg.author_type === 'system' ? (
+              <div className="system-notice">{msg.content}</div>
+            ) : (
+              <>
+                <div className="message-avatar">{getAuthorAvatar(msg)}</div>
+                <div className="message-body">
+                  <div className="message-meta">
+                    <span className="message-author">{msg.author_name}</span>
+                    <span className="message-time">{formatTime(msg.timestamp)}</span>
+                  </div>
+                  <div className={`message-bubble ${msg.author_type !== 'human' ? 'markdown-body' : ''}`}>
+                    {renderContent(msg.content, msg.author_type)}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         ))}
         <div ref={messagesEndRef} />

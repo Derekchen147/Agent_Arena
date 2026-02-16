@@ -1,11 +1,11 @@
 .group-sidebar {
   width: 260px;
   min-width: 260px;
-  background: #1a1a2e;
-  color: #e0e0e0;
+  background: #ffffff;
+  color: #1d1d1f;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid #2a2a4a;
+  border-right: 1px solid #e5e5e7;
 }
 
 .sidebar-header {
@@ -13,16 +13,14 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px;
-  border-bottom: 1px solid #2a2a4a;
+  border-bottom: 1px solid #e5e5e7;
 }
 
 .sidebar-header h2 {
   margin: 0;
   font-size: 18px;
   font-weight: 700;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #1d1d1f;
 }
 
 .btn-icon {
@@ -30,8 +28,8 @@
   height: 32px;
   border: none;
   border-radius: 8px;
-  background: #2a2a4a;
-  color: #e0e0e0;
+  background: #f5f5f7;
+  color: #1d1d1f;
   font-size: 20px;
   cursor: pointer;
   display: flex;
@@ -41,7 +39,7 @@
 }
 
 .btn-icon:hover {
-  background: #3a3a5a;
+  background: #e8e8ed;
 }
 
 .group-list {
@@ -62,12 +60,12 @@
 }
 
 .group-item:hover {
-  background: #2a2a4a;
+  background: rgba(0, 0, 0, 0.04);
 }
 
 .group-item.active {
-  background: #2a2a4a;
-  border-left: 3px solid #667eea;
+  background: rgba(0, 113, 227, 0.06);
+  border-left: 3px solid #0071e3;
 }
 
 .group-info {
@@ -87,13 +85,13 @@
 
 .group-members {
   font-size: 12px;
-  color: #888;
+  color: #6e6e73;
 }
 
 .btn-delete {
   border: none;
   background: none;
-  color: #666;
+  color: #6e6e73;
   font-size: 18px;
   cursor: pointer;
   padding: 0 4px;
@@ -111,7 +109,7 @@
 
 .empty-hint {
   text-align: center;
-  color: #666;
+  color: #6e6e73;
   padding: 24px 16px;
   font-size: 13px;
 }
@@ -123,7 +121,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.25);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -131,27 +129,28 @@
 }
 
 .modal {
-  background: #1e1e3a;
-  border: 1px solid #3a3a5a;
+  background: #ffffff;
+  border: 1px solid #e5e5e7;
   border-radius: 12px;
   padding: 24px;
   min-width: 360px;
   max-width: 480px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
 }
 
 .modal h3 {
   margin: 0 0 16px 0;
   font-size: 16px;
-  color: #e0e0e0;
+  color: #1d1d1f;
 }
 
 .modal input {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid #3a3a5a;
+  border: 1px solid #d2d2d7;
   border-radius: 8px;
-  background: #12122a;
-  color: #e0e0e0;
+  background: #ffffff;
+  color: #1d1d1f;
   font-size: 14px;
   margin-bottom: 12px;
   outline: none;
@@ -159,7 +158,7 @@
 }
 
 .modal input:focus {
-  border-color: #667eea;
+  border-color: #0071e3;
 }
 
 .modal-actions {
@@ -171,26 +170,28 @@
 
 .modal-actions button {
   padding: 8px 16px;
-  border: 1px solid #3a3a5a;
+  border: 1px solid #d2d2d7;
   border-radius: 8px;
-  background: #2a2a4a;
-  color: #e0e0e0;
+  background: #f5f5f7;
+  color: #1d1d1f;
   cursor: pointer;
   font-size: 13px;
   transition: background 0.2s;
 }
 
 .modal-actions button:hover {
-  background: #3a3a5a;
+  background: #e8e8ed;
 }
 
 .btn-primary {
-  background: #667eea !important;
-  border-color: #667eea !important;
+  background: #0071e3 !important;
+  border-color: #0071e3 !important;
+  color: #ffffff !important;
 }
 
 .btn-primary:hover {
-  background: #5a6fd6 !important;
+  background: #0077ed !important;
+  border-color: #0077ed !important;
 }
 
 .btn-primary:disabled {

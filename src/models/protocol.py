@@ -41,18 +41,28 @@ class Attachment(BaseModel):
     data: str = ""
 
 
+class Peer(BaseModel):
+    """群组中的同事摘要，用于让 Agent 了解可协作的成员（不含自身）。"""
+
+    agent_id: str
+    name: str = ""
+    skills: list[str] = Field(default_factory=list)
+
+
 class AgentInput(BaseModel):
     """系统在一次调用中传给 Agent 的完整输入：会话、角色、历史、记忆与 token 限制。"""
 
     session_id: str
     turn_id: str
     agent_id: str
+    agent_name: str = ""
     role_prompt: str = ""
 
     invocation: Literal["must_reply", "may_reply"] = "must_reply"
     mentioned_by: str | None = None
 
     messages: list[Message] = Field(default_factory=list)
+    peers: list[Peer] = Field(default_factory=list)
     memory_context: str | None = None
 
     max_output_tokens: int = 2000

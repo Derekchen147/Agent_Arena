@@ -38,6 +38,8 @@ class Turn:
     may_reply_agents: list[str] = field(default_factory=list)   # 可选回复，按名额取
     completed_replies: list[AgentOutput] = field(default_factory=list)
 
+    group_agent_ids: list[str] = field(default_factory=list)  # 本群所有 Agent 成员 ID（含所有 agent）
+
     max_responders: int = 5   # 本回合最多允许多少个 Agent 回复
     timeout_seconds: int = 120
     chain_depth: int = 0      # 当前链式深度，用于限制自动多轮
@@ -121,6 +123,7 @@ class Orchestrator:
             trigger_source=author_id,
             must_reply_agents=must_reply,
             may_reply_agents=may_reply,
+            group_agent_ids=agent_members,
             max_responders=config.max_responders,
             timeout_seconds=config.turn_timeout_seconds,
             chain_depth=0,
@@ -259,6 +262,7 @@ class Orchestrator:
                 trigger_source="system",
                 must_reply_agents=list(all_next_mentions),
                 may_reply_agents=remaining_agents,
+                group_agent_ids=agent_members,
                 max_responders=config.max_responders,
                 timeout_seconds=config.turn_timeout_seconds,
                 chain_depth=turn.chain_depth + 1,
@@ -289,6 +293,7 @@ class Orchestrator:
             turn_id=turn.turn_id,
             invocation=invocation,
             mentioned_by=turn.trigger_source,
+            group_agent_ids=turn.group_agent_ids,
         )
         logger.info(
             "[CALL] AgentInput built for %s: messages=%d role_prompt_len=%d memory=%s",

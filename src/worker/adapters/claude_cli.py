@@ -61,6 +61,7 @@ class ClaudeCliAdapter(BaseAdapter):
     ) -> AgentOutput:
         """在 workspace_dir 下执行 claude -p "prompt" --output-format json，解析 JSON 或纯文本为 AgentOutput。"""
         prompt = self._build_prompt(input)
+        logger.info("[CALL] claude_cli assembled prompt =====> / %s", prompt)
 
         cmd = ["claude", "-p", prompt, "--output-format", "json"]
         cmd.extend(self.extra_args)
@@ -73,10 +74,7 @@ class ClaudeCliAdapter(BaseAdapter):
             len(prompt),
             self.extra_args,
         )
-        logger.info(
-            "[CALL] claude_cli assembled prompt preview (first 300 chars): %s",
-            (prompt[:300] + "…") if len(prompt) > 300 else prompt,
-        )
+        logger.info("[CALL] claude_cli assembled prompt =====> / %s", prompt)
 
         run_env = _subprocess_env(self.env)
 
@@ -160,36 +158,65 @@ class ClaudeCliAdapter(BaseAdapter):
     def _build_prompt(self, input: AgentInput) -> str:
         """将 AgentInput 转为发给 Claude CLI 的 prompt。
 
-        注意：role_prompt 不在这里注入——它已经写在 workspace_dir/CLAUDE.md 中，
-        Claude CLI 会自动读取。这里只构建对话消息。
-        """
-        parts = []
+        结构：
+        1. 当前会话成员 — 让 Agent 知道自己是谁、群里有哪些同事可协作
+        2. 对话记录     — 历史消息（只读上下文）
+        3. 当前待回复消息 — 从历史中提取的最后一条，Agent 只需回复这条
+        4. 回复规则     — 简洁、SKIP、不重复历史
+        5. 协作         — NEXT_MENTIONS 格式
 
-        # 对话上下文
-        if input.messages:
-            parts.append("## 当前对话")
-            for msg in input.messages:
+        注意：role_prompt 不在这里注入——它已经写在 workspace_dir/CLAUDE.md 中，
+        Claude CLI 会自动读取。
+        """
+        parts: list[str] = []
+
+        # ── 1. 当前会话成员 ──
+        agent_label = f"「{input.agent_name}」({input.agent_id})" if input.agent_name else f"({input.agent_id})"
+        parts.append(f"## 当前会话成员\n你是{agent_label}。")
+        if input.peers:
+            parts.append("以下是本群的其他成员：")
+            for p in input.peers:
+                skills = ", ".join(p.skills) if p.skills else "无"
+                parts.append(f"- {p.name} ({p.agent_id}) — 技能: {skills}")
+        parts.append("")  # 空行分隔
+
+        # ── 2. 对话记录（只读上下文）──
+        if input.messages and len(input.messages) > 1:
+            history = input.messages[:-1]
+            parts.append("## 对话记录（只读上下文，不要回复这些历史消息）")
+            for msg in history:
                 author = msg.author_name or msg.role
                 parts.append(f"[{author}]: {msg.content}")
+            parts.append("")  # 空行分隔
 
-        # 记忆注入
+        # ── 3. 记忆注入 ──
         if input.memory_context:
-            parts.append(f"\n## 相关记忆\n{input.memory_context}")
+            parts.append(f"## 相关记忆\n{input.memory_context}\n")
 
-        # 响应指引
-        if input.invocation == "may_reply":
-            parts.append(
-                "\n## 注意\n"
-                "如果你认为这条消息与你的职责无关，请只回复：SKIP"
-            )
+        # ── 4. 当前待回复消息 ──
+        parts.append("---\n")
+        if input.messages:
+            current = input.messages[-1]
+            author = current.author_name or current.role
+            parts.append("## 当前待回复消息")
+            parts.append(f"发送者: {author}")
+            parts.append(f"内容:\n{current.content}")
+        parts.append("\n---\n")
 
+        # ── 5. 回复规则 ──
+        rules = ["## 回复规则"]
+        rules.append("1. 只针对「当前待回复消息」回复，「对话记录」仅作为上下文参考，无需特别回复")
         if input.prefer_concise:
-            parts.append("\n请简洁回复，突出关键信息。")
+            rules.append("2. 简洁回复，突出关键信息")
+        if input.invocation == "may_reply":
+            rules.append("3. 如果你认为这条消息与你的职责无关，仅回复：SKIP")
+        parts.append("\n".join(rules))
 
-        # @mention 协作指引
+        # ── 6. 协作 ──
         parts.append(
             "\n## 协作\n"
-            "如果你需要其他同事参与，在回复末尾用这个格式：\n"
+            "如果你需要其他同事参与，在回复末尾用这个格式"
+            "（agent_id 必须来自「当前会话成员」列表）：\n"
             "<!--NEXT_MENTIONS:[\"agent_id_1\",\"agent_id_2\"]-->"
         )
 

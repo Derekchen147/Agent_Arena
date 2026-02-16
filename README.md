@@ -5,6 +5,11 @@
 
 ---
 
+uvicorn src.main:app --reload 
+
+npm run dev
+
+
 ## 零、核心理念：我们在做什么，不在做什么
 
 **在做什么：**

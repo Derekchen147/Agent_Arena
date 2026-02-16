@@ -10,7 +10,7 @@ import logging
 import uuid
 from typing import TYPE_CHECKING, Literal
 
-from src.models.protocol import AgentInput, Message
+from src.models.protocol import AgentInput, Message, Peer
 
 if TYPE_CHECKING:
     from src.core.session_manager import SessionManager
@@ -41,8 +41,14 @@ class ContextBuilder:
         turn_id: str,
         invocation: Literal["must_reply", "may_reply"] = "must_reply",
         mentioned_by: str | None = None,
+        group_agent_ids: list[str] | None = None,
     ) -> AgentInput:
-        """为指定 Agent 组装一次调用的完整输入：角色、历史、记忆、参数等。"""
+        """为指定 Agent 组装一次调用的完整输入：角色、历史、记忆、同事列表等。
+
+        Args:
+            group_agent_ids: 本群所有 Agent 成员的 agent_id 列表（含自身），
+                             用于构建 peers（排除自身后的同事摘要）。
+        """
         logger.info(
             "[CALL] context_builder.build_input: agent_id=%s session_id=%s turn_id=%s invocation=%s mentioned_by=%s",
             agent_id,
@@ -54,14 +60,28 @@ class ContextBuilder:
         # 从注册表取该 Agent 的配置（角色提示、最大 token 等）
         profile = self.registry.get_agent(agent_id)
 
+        # 构建同事列表（排除自身）
+        peers: list[Peer] = []
+        for aid in (group_agent_ids or []):
+            if aid == agent_id:
+                continue
+            peer_profile = self.registry.get_agent(aid)
+            if peer_profile:
+                peers.append(Peer(
+                    agent_id=aid,
+                    name=peer_profile.name,
+                    skills=peer_profile.skills,
+                ))
+
         # 从会话中取最近 N 条消息并转为 protocol.Message，用于对话上下文
         messages = await self._get_truncated_history(
             session_id,
             max_messages=50,  # MVP：简单按条数截断
         )
         logger.info(
-            "[CALL] context_builder: fetched history messages_count=%s",
+            "[CALL] context_builder: fetched history messages_count=%s peers_count=%s",
             len(messages),
+            len(peers),
         )
 
         # 若有记忆存储，用最近一条消息做查询，取相关记忆片段拼成字符串
@@ -78,22 +98,25 @@ class ContextBuilder:
             session_id=session_id,
             turn_id=turn_id or str(uuid.uuid4()),
             agent_id=agent_id,
+            agent_name=profile.name,
             role_prompt=profile.role_prompt,
             invocation=invocation,
             mentioned_by=mentioned_by,
             messages=messages,
+            peers=peers,
             memory_context=memory_context,
             max_output_tokens=profile.max_output_tokens,
             prefer_concise=True,
         )
         logger.info(
             "[CALL] context_builder: AgentInput assembled for %s: session_id=%s turn_id=%s invocation=%s "
-            "messages=%d role_prompt_len=%d memory_len=%s max_output_tokens=%s",
+            "messages=%d peers=%d role_prompt_len=%d memory_len=%s max_output_tokens=%s",
             agent_id,
             agent_input.session_id,
             agent_input.turn_id,
             agent_input.invocation,
             len(agent_input.messages),
+            len(agent_input.peers),
             len(agent_input.role_prompt or ""),
             len(agent_input.memory_context or ""),
             agent_input.max_output_tokens,
