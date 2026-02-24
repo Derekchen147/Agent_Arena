@@ -181,6 +181,73 @@ class WorkspaceManager:
             raise RuntimeError(f"git clone failed: {stderr.decode()}")
         logger.info(f"Cloned successfully: {target_path}")
 
+    # ── 更新 Agent ──
+
+    async def update_agent(self, profile: AgentProfile, old_profile: AgentProfile) -> AgentProfile:
+        """更新已有 Agent 的配置：YAML、registry、workspace 角色文件。"""
+        workspace_path = Path(profile.workspace_dir)
+
+        cli_type_changed = profile.cli_config.cli_type != old_profile.cli_config.cli_type
+        role_changed = profile.role_prompt != old_profile.role_prompt
+
+        # cli_type 切换时，清理旧格式文件
+        if cli_type_changed:
+            if old_profile.cli_config.cli_type == "cursor":
+                old_rule = workspace_path / ".cursor" / "rules" / "role.mdc"
+                if old_rule.exists():
+                    old_rule.unlink()
+                    logger.info(f"Removed old .cursor/rules/role.mdc for {profile.agent_id}")
+            else:
+                old_claude = workspace_path / "CLAUDE.md"
+                if old_claude.exists():
+                    old_claude.unlink()
+                    logger.info(f"Removed old CLAUDE.md for {profile.agent_id}")
+
+        # role_prompt 或 cli_type 变更时，写入新格式角色文件
+        if (role_changed or cli_type_changed) and profile.role_prompt:
+            if profile.cli_config.cli_type == "cursor":
+                self._force_write_cursor_role_rule(workspace_path, profile.role_prompt)
+            else:
+                self._force_write_claude_md(workspace_path, profile.role_prompt)
+
+        self._save_agent_yaml(profile)
+        self.registry.register_agent(profile)
+        logger.info(f"Updated agent: {profile.agent_id}")
+        return profile
+
+    # ── Workspace 文件读写 ──
+
+    def read_workspace_config(self, agent_id: str) -> tuple[str, str]:
+        """读取 workspace 角色文件，返回 (content, filename)。"""
+        profile = self.registry.get_agent(agent_id)
+        workspace_path = Path(profile.workspace_dir)
+
+        if profile.cli_config.cli_type == "cursor":
+            filepath = workspace_path / ".cursor" / "rules" / "role.mdc"
+            filename = ".cursor/rules/role.mdc"
+        else:
+            filepath = workspace_path / "CLAUDE.md"
+            filename = "CLAUDE.md"
+
+        content = filepath.read_text(encoding="utf-8") if filepath.exists() else ""
+        return content, filename
+
+    def write_workspace_config(self, agent_id: str, content: str) -> None:
+        """直接写入 workspace 角色文件。"""
+        profile = self.registry.get_agent(agent_id)
+        workspace_path = Path(profile.workspace_dir)
+
+        if profile.cli_config.cli_type == "cursor":
+            rules_dir = workspace_path / ".cursor" / "rules"
+            rules_dir.mkdir(parents=True, exist_ok=True)
+            (rules_dir / "role.mdc").write_text(content, encoding="utf-8")
+        else:
+            (workspace_path / "CLAUDE.md").write_text(content, encoding="utf-8")
+
+        logger.info(f"Wrote workspace config for {agent_id}")
+
+    # ── 角色文件写入（onboard 用，不覆盖已有） ──
+
     def _write_claude_md(self, workspace_path: Path, role_prompt: str) -> None:
         """在工作目录下创建 CLAUDE.md 写入 role_prompt；若已存在则跳过避免覆盖仓库自带配置。"""
         claude_md = workspace_path / "CLAUDE.md"
@@ -211,6 +278,28 @@ class WorkspaceManager:
         )
         rule_path.write_text(content, encoding="utf-8")
         logger.info(f"Wrote .cursor/rules/role.mdc to {workspace_path}")
+
+    # ── 角色文件强制写入（update 用，覆盖已有） ──
+
+    def _force_write_claude_md(self, workspace_path: Path, role_prompt: str) -> None:
+        """强制写入 CLAUDE.md（更新场景使用，覆盖已有文件）。"""
+        claude_md = workspace_path / "CLAUDE.md"
+        claude_md.write_text(role_prompt, encoding="utf-8")
+        logger.info(f"Force wrote CLAUDE.md to {workspace_path}")
+
+    def _force_write_cursor_role_rule(self, workspace_path: Path, role_prompt: str) -> None:
+        """强制写入 .cursor/rules/role.mdc（更新场景使用，覆盖已有文件）。"""
+        rules_dir = workspace_path / ".cursor" / "rules"
+        rules_dir.mkdir(parents=True, exist_ok=True)
+        content = (
+            "---\n"
+            "description: Agent role and background (always applied)\n"
+            "alwaysApply: true\n"
+            "---\n\n"
+            f"{role_prompt}"
+        )
+        (rules_dir / "role.mdc").write_text(content, encoding="utf-8")
+        logger.info(f"Force wrote .cursor/rules/role.mdc to {workspace_path}")
 
     def _save_agent_yaml(self, profile: AgentProfile) -> None:
         """将 profile 序列化为 YAML 写入 agents_config_dir/{agent_id}.yaml。"""
