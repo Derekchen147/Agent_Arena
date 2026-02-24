@@ -6,6 +6,7 @@ import type {
   SendMessageRequest,
   AddMemberRequest,
   OnboardAgentRequest,
+  UpdateAgentRequest,
   GroupMember,
 } from '../types';
 
@@ -108,8 +109,27 @@ export async function onboardAgent(req: OnboardAgentRequest): Promise<AgentProfi
   return data.agent;
 }
 
+export async function updateAgent(agentId: string, req: UpdateAgentRequest): Promise<AgentProfile> {
+  const data = await request<{ agent: AgentProfile }>(`/agents/${agentId}`, {
+    method: 'PUT',
+    body: JSON.stringify(req),
+  });
+  return data.agent;
+}
+
 export async function deleteAgent(agentId: string): Promise<void> {
   await request(`/agents/${agentId}`, { method: 'DELETE' });
+}
+
+export async function getWorkspaceConfig(agentId: string): Promise<{ content: string; filename: string }> {
+  return request(`/agents/${agentId}/workspace-config`);
+}
+
+export async function updateWorkspaceConfig(agentId: string, content: string): Promise<void> {
+  await request(`/agents/${agentId}/workspace-config`, {
+    method: 'PUT',
+    body: JSON.stringify({ content }),
+  });
 }
 
 export async function reloadAgents(): Promise<{ ok: boolean; count: number }> {

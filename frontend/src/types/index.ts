@@ -57,6 +57,7 @@ export interface CliConfig {
   command: string;
   timeout: number;
   extra_args: string[];
+  env: Record<string, string>;
 }
 
 export interface AgentProfile {
@@ -123,4 +124,20 @@ export interface OnboardAgentRequest {
   cli_type?: string;
   avatar?: string;
   priority_keywords?: string[];
+}
+
+export interface UpdateAgentRequest {
+  name: string;
+  avatar: string;
+  role_prompt: string;
+  skills: string[];
+  cli_type: string;
+  command: string;
+  timeout: number;
+  extra_args: string[];
+  env: Record<string, string>;
+  auto_respond: boolean;
+  response_threshold: number;
+  priority_keywords: string[];
+  max_output_tokens: number;
 }

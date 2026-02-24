@@ -5,9 +5,11 @@ import { useWebSocket } from './hooks/useWebSocket';
 import GroupSidebar from './components/GroupSidebar';
 import ChatArea from './components/ChatArea';
 import AgentPanel from './components/AgentPanel';
+import AgentManagement from './components/AgentManagement';
 import './App.css';
 
 export default function App() {
+  const [view, setView] = useState<'chat' | 'agents'>('chat');
   const [groups, setGroups] = useState<Group[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
@@ -131,6 +133,18 @@ export default function App() {
     }
   };
 
+  if (view === 'agents') {
+    return (
+      <div className="app-layout">
+        <AgentManagement
+          agents={agents}
+          onAgentsChanged={loadAgents}
+          onBack={() => setView('chat')}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="app-layout">
       <GroupSidebar
@@ -153,6 +167,7 @@ export default function App() {
         agentStatuses={agentStatuses}
         onGroupChanged={handleGroupChanged}
         onAgentsChanged={loadAgents}
+        onViewAgents={() => setView('agents')}
       />
     </div>
   );

@@ -10,6 +10,7 @@ interface Props {
   agentStatuses: AgentStatusMap;
   onGroupChanged: () => void;
   onAgentsChanged: () => void;
+  onViewAgents?: () => void;
 }
 
 const STATUS_CONFIG: Record<AgentStatus, { label: string; color: string; icon: string }> = {
@@ -31,6 +32,7 @@ export default function AgentPanel({
   agentStatuses,
   onGroupChanged,
   onAgentsChanged,
+  onViewAgents,
 }: Props) {
   const [showOnboard, setShowOnboard] = useState(false);
   const [form, setForm] = useState({
@@ -123,9 +125,16 @@ export default function AgentPanel({
     <div className="agent-panel">
       <div className="panel-header">
         <h3>员工</h3>
-        <button className="btn-icon" onClick={() => setShowOnboard(true)} title="新增员工">
-          +
-        </button>
+        <div style={{ display: 'flex', gap: '4px' }}>
+          {onViewAgents && (
+            <button className="btn-icon" onClick={onViewAgents} title="管理员工">
+              &#9881;
+            </button>
+          )}
+          <button className="btn-icon" onClick={() => setShowOnboard(true)} title="新增员工">
+            +
+          </button>
+        </div>
       </div>
 
       {group && (
@@ -265,6 +274,7 @@ export default function AgentPanel({
               className="modal-select"
             >
               <option value="claude">Claude CLI</option>
+              <option value="cursor">Cursor CLI</option>
               <option value="generic">Generic CLI</option>
             </select>
             <div className="modal-actions">

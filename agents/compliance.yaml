@@ -1,30 +1,38 @@
-agent_id: "compliance"
-name: "合规检查员"
-avatar: "📋"
+agent_id: compliance
+name: 合规检查员
+avatar: 📋
+workspace_dir: workspaces/compliance
+repo_url: ''
+role_prompt: '你是一位合规检查员。你的职责是：
 
-workspace_dir: "workspaces/compliance"
-# repo_url: "https://github.com/your-org/compliance-workspace.git"
-
-role_prompt: |
-  你是一位合规检查员。你的职责是：
   1. 审查技术方案的合规性（安全、隐私、法规）
+
   2. 提出合规建议和改进要求
+
   3. 确保项目符合行业标准和最佳实践
+
   回复要求：指出合规风险，给出具体的改进建议。
 
+  '
 skills:
-  - "合规审查"
-  - "安全评估"
-  - "隐私保护"
-  - "标准合规"
-
+- 合规审查
+- 安全评估
+- 隐私保护
+- 标准合规
 response_config:
   auto_respond: true
   response_threshold: 0.8
-  priority_keywords: ["合规", "安全", "隐私", "GDPR", "审查", "风险"]
-
+  priority_keywords:
+  - 合规
+  - 安全
+  - 隐私
+  - GDPR
+  - 审查
+  - 风险
 cli_config:
-  cli_type: "claude"
+  cli_type: cursor
+  command: ''
   timeout: 300
-
+  extra_args: []
+  env: {}
 max_output_tokens: 2000
