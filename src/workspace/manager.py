@@ -1,6 +1,7 @@
 """工作区管理：Agent 接入、工作目录创建、角色配置写入、YAML 持久化与注册表同步。
 
-接入流程：clone（或建空目录）→ 按 CLI 类型写角色配置 → 写 agents/{id}.yaml → registry.register。
+接入流程：clone（或建空目录）→ 按 CLI 类型写角色配置 → 写 agents/{id}.yaml → registry.register
+          → 初始化个人记忆目录（memory/）和 MEMORY.md 模板。
 
 角色/System Prompt 约定：
 - Claude CLI：工作目录下的 CLAUDE.md 作为该 Agent 的上下文与角色定义。
@@ -17,6 +18,7 @@ from pathlib import Path
 
 import yaml
 
+from src.memory.personal import PersonalMemoryManager
 from src.models.agent import AgentProfile, CliConfig, ResponseConfig
 from src.registry.agent_registry import AgentRegistry
 
@@ -40,6 +42,7 @@ class WorkspaceManager:
         self.workspaces_dir = Path(workspaces_dir)
         self.agents_config_dir = Path(agents_config_dir)
         self.workspaces_dir.mkdir(parents=True, exist_ok=True)
+        self._personal_memory = PersonalMemoryManager()
 
     async def onboard_agent(
         self,
@@ -96,6 +99,9 @@ class WorkspaceManager:
 
         # 写入内存中的注册表，供编排与 Worker 使用
         self.registry.register_agent(profile)
+
+        # 初始化个人记忆目录和 MEMORY.md 模板
+        self._personal_memory.init_workspace_memory(str(workspace_path), name)
 
         logger.info(f"Onboarded agent: {agent_id} ({name}) -> {workspace_path}")
         return profile

@@ -28,6 +28,8 @@ from src.api.websocket import WebSocketManager
 from src.core.context_builder import ContextBuilder
 from src.core.orchestrator import Orchestrator
 from src.core.session_manager import SessionManager
+from src.memory.personal import PersonalMemoryManager
+from src.memory.session_summary import SessionSummaryManager
 from src.memory.store import MemoryStore
 from src.registry.agent_registry import AgentRegistry
 from src.worker.runtime import WorkerRuntime
@@ -73,6 +75,8 @@ async def lifespan(app: FastAPI):
     # 初始化 Agent 注册表、记忆存储、WebSocket 广播、工作区管理
     registry = AgentRegistry(config_dir="agents/")
     memory_store = MemoryStore(memory_dir="data/memory")
+    personal_memory = PersonalMemoryManager()
+    session_summary = SessionSummaryManager(memory_dir="data/memory")
     ws_manager = WebSocketManager()
     workspace_manager = WorkspaceManager(
         registry=registry,
@@ -85,6 +89,8 @@ async def lifespan(app: FastAPI):
         session_manager=session_manager,
         registry=registry,
         memory_store=memory_store,
+        personal_memory=personal_memory,
+        session_summary=session_summary,
     )
     worker_runtime = WorkerRuntime(registry=registry, ws_manager=ws_manager)
     orchestrator = Orchestrator(
@@ -93,6 +99,9 @@ async def lifespan(app: FastAPI):
         worker_runtime=worker_runtime,
         registry=registry,
         ws_manager=ws_manager,
+        memory_store=memory_store,
+        personal_memory=personal_memory,
+        session_summary=session_summary,
     )
 
     # 将各组件挂到全局状态，供路由与 WebSocket 使用
