@@ -196,7 +196,6 @@
 .message.agent .message-bubble {
   background: #ffffff;
   border-radius: 2px 12px 12px 12px;
-  white-space: pre-wrap;
 }
 
 /* Human bubble: green (WeChat style), right-aligned with right tail */
@@ -226,7 +225,7 @@
 /* ================================
    Markdown body overrides (agent bubbles)
    ================================ */
-.message-bubble.markdown-body {
+.message.agent .message-bubble.markdown-body {
   white-space: normal;
   line-height: 1.5;
 }
