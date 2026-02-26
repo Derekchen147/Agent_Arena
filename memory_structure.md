@@ -25,35 +25,37 @@
 
 ---
 
-## 二、OpenClaw 怎么解决多实例群聊问题
+## 二、OpenClaw 的参考价值与不适用点
 
-OpenClaw 的核心设计原则（从 raw_openclaw_memory_implementation.md 提炼）：
+### OpenClaw 的设计前提（与本系统不同）
 
-### 记忆分层策略
+OpenClaw 面向的是**公网多人群聊**场景：群里有多个真实用户，每人都有自己的 OpenClaw 实例。因此它需要：
+- 防止 A 的私人记忆泄漏给 B（不同人类之间的隐私）
+- 群聊中每个 OpenClaw 都不知道其他成员是谁的
 
-```
-每个 OpenClaw 实例的 Workspace：
-├── SOUL.md          → 核心身份，永远加载
-├── USER.md          → 服务对象信息，永远加载
-├── MEMORY.md        → 精华长期记忆，⚠️ 仅主会话加载，群聊不加载
-├── AGENTS.md        → 行为规范说明
-└── memory/
-    └── YYYY-MM-DD.md → 每日原始日志，加载今天和昨天
-```
+所以 OpenClaw 在群聊中不加载 MEMORY.md，是出于**跨人类用户的隐私保护**。
 
-### 群聊 vs 主会话的关键区别
+### Agent Arena 的实际场景
 
 ```
-主会话（1对1私聊）：加载全部 → SOUL + USER + MEMORY + 今日日志
-群聊（多人协作）：  加载部分 → SOUL + USER + 今日日志（跳过 MEMORY）
+Agent Arena 群聊结构：
+  一个人类用户（群主/老板）
+  + N 个 AI 数字员工（全部为该用户服务）
 ```
 
-**为什么群聊不加载 MEMORY.md？**
-- MEMORY.md 包含与主人的私密上下文（个人偏好、私密决策、隐私数据）
-- 多个 OpenClaw 在同一群聊，不能让 A 的私人记忆泄漏给 B 或其他群成员
-- 群聊里各实例只扮演"参与者"而非"主人的代理人"
+**这意味着：**
+- 群里没有陌生人，所有 Agent 都是同一个用户的员工
+- Agent A 的记忆泄漏给 Agent B 完全可以接受，甚至是期望的
+- OpenClaw 的群聊记忆限制**不适用于本系统**
 
-### 记忆增长机制（Heartbeat 心跳）
+### OpenClaw 仍然值得借鉴的部分
+
+1. **分层记忆结构**：身份层 / 个人成长层 / 会话协作层
+2. **文件即记忆**：SOUL.md、MEMORY.md、daily logs 的文件组织方式
+3. **Heartbeat 蒸馏机制**：定期从日志提炼精华到 MEMORY.md
+4. **主动写记忆**：Agent 自己判断哪些值得保存，而不只是被动接受
+
+### Heartbeat 记忆增长机制（值得借鉴）
 
 OpenClaw 通过定期"心跳"任务：
 1. 读取近期 daily logs
@@ -68,53 +70,76 @@ OpenClaw 通过定期"心跳"任务：
 ### 3.1 建议的三层记忆模型
 
 ```
-Layer 1: 身份层（Identity）
+Layer 1: 身份层（Identity）- 静态，慢变化
   workspaces/{agent_id}/
   ├── CLAUDE.md           → 角色定义（现有）
-  ├── SOUL.md             → 核心人格、价值观（新增）
-  └── SKILLS.md           → 专业技能说明（可选）
+  └── SOUL.md             → 核心人格、价值观（新增，可选）
 
-Layer 2: 个人成长层（Personal Memory）
+Layer 2: 个人成长层（Personal Memory）- 动态，跨会话积累
   workspaces/{agent_id}/
-  ├── MEMORY.md           → 精华长期记忆（新增，⚠️ 群聊不注入）
+  ├── MEMORY.md           → 精华长期记忆，每次都加载（新增）
   └── memory/
-      └── YYYY-MM-DD.md   → 每日工作日志（新增）
+      └── YYYY-MM-DD.md   → 每日工作原始日志（新增）
 
-Layer 3: 群聊协作层（Session Memory）
+Layer 3: 群聊协作层（Session Memory）- 动态，当前群聊上下文
   data/memory/
-  └── session_{group_id}.json  → 会话级结构化记忆（现有 MemoryStore）
+  ├── session_{group_id}.json   → 结构化记忆条目（现有 MemoryStore）
+  └── summary_{group_id}.md    → 会话滚动摘要（新增）
 ```
+
+**关键简化**：由于群聊里只有一个人类用户，Agent 的个人 MEMORY.md 在任何场景下都可以加载，不需要像 OpenClaw 一样区分主会话/群聊。
 
 ### 3.2 每次 Agent 调用时的记忆加载逻辑
 
-```python
-# 在 ContextBuilder.build_input 中按优先级组装上下文
+唯一真正的约束是 **Token 预算**，不是隐私。所有记忆都可以加载，按优先级装填：
 
-def _build_memory_context(agent_id, session_id, is_group_chat=True):
+```python
+# 在 ContextBuilder.build_input 中按 Token 优先级组装
+
+def _build_memory_context(agent_id, session_id):
     parts = []
 
-    # Layer 1：身份（总是加载，字数最少，影响最大）
-    soul = read_file(f"workspaces/{agent_id}/SOUL.md")      # ~200 tokens
-    parts.append(soul)
+    # ① 身份层：总是完整加载，最高优先级（~200 tokens）
+    claude_md = read_file(f"workspaces/{agent_id}/CLAUDE.md")
+    parts.append(claude_md)
 
-    # Layer 2：个人成长记忆（群聊中只加载近期日志，不加载 MEMORY.md）
-    today_log = read_file(f"workspaces/{agent_id}/memory/{today}.md")   # ~300 tokens
+    # ② 个人精华记忆：跨会话成长的核心（~400 tokens，控制在限额内）
+    long_term = read_file(f"workspaces/{agent_id}/MEMORY.md")
+    parts.append(long_term)
+
+    # ③ 今日/昨日工作日志：近期上下文（~300 tokens）
+    today_log = read_file(f"workspaces/{agent_id}/memory/{today}.md")
     yesterday_log = read_file(f"workspaces/{agent_id}/memory/{yesterday}.md")
     parts.extend([today_log, yesterday_log])
 
-    if not is_group_chat:
-        # 1对1私聊才加载完整长期记忆
-        long_term = read_file(f"workspaces/{agent_id}/MEMORY.md")
-        parts.append(long_term)
+    # ④ 群聊滚动摘要：解决长对话截断的关键（~300 tokens）
+    rolling_summary = read_file(f"data/memory/summary_{session_id}.md")
+    parts.append(rolling_summary)
 
-    # Layer 3：群聊协作记忆（当前 MemoryStore）
-    session_memory = memory_store.search(session_id, query=latest_message)  # top-5
+    # ⑤ 结构化记忆检索：与当前问题相关的历史条目（top-5，~200 tokens）
+    session_memory = memory_store.search(session_id, query=latest_message)
     parts.append(session_memory)
+
+    # ⑥ 近期对话历史：在剩余 token 预算内尽量多取（倒序，优先最新）
+    # （由现有的 _get_truncated_history 处理）
 
     return "\n\n---\n\n".join(filter(None, parts))
 ```
 
+**Token 预算示例**（Claude Sonnet，200K 上下文）：
+
+| 层级 | 预算 | 说明 |
+|------|-----|------|
+| 身份（CLAUDE.md） | ~500 tokens | 固定，角色定义 |
+| 个人精华记忆（MEMORY.md） | ~800 tokens | 控制文件大小 |
+| 近期日志（今+昨） | ~600 tokens | 近期工作上下文 |
+| 群聊滚动摘要 | ~500 tokens | 防止长对话失忆 |
+| 结构化记忆条目 | ~400 tokens | 相关历史检索 |
+| **对话历史** | **剩余全部** | ~198K tokens 可用 |
+
 ### 3.3 Workspace 策略：独立 vs 共享
+
+**真正的问题不是隐私，而是：个人成长记忆在哪存，协作时代码库怎么共享。**
 
 #### 结论：个人 Workspace 独立，项目 Workspace 共享引用
 
@@ -122,7 +147,7 @@ def _build_memory_context(agent_id, session_id, is_group_chat=True):
 |------|-----------------|-----------------|
 | 身份记忆 | ✅ 每个员工独立存储成长记忆 | ❌ 无法区分谁的记忆 |
 | 项目文件 | ❌ 每人一份，同步麻烦 | ✅ 一份代码库，实时一致 |
-| 隐私保护 | ✅ MEMORY.md 不泄漏 | ❌ 难以隔离 |
+| 工具执行隔离 | ✅ 互不干扰 | ❌ 并发写同一文件冲突 |
 | 实现复杂度 | 中 | 低 |
 
 **推荐方案：双 Workspace 模式**
@@ -130,13 +155,14 @@ def _build_memory_context(agent_id, session_id, is_group_chat=True):
 ```yaml
 # agents/developer.yaml
 agent_id: developer
-workspace_dir: workspaces/developer     # 个人 workspace（记忆、身份）
-project_workspace: workspaces/shared    # 项目 workspace（代码库，可共享）
+workspace_dir: workspaces/developer     # 个人 workspace（记忆、身份文件）
+project_workspace: workspaces/shared    # 项目 workspace（代码库，多员工共享）
 ```
 
-- **个人 workspace**：存放 SOUL.md、MEMORY.md、daily logs，独立，私密
-- **项目 workspace**：Claude CLI 实际执行代码时指向的代码库路径（可多个员工共享同一个）
-- ContextBuilder 在注入 `--add-dir` 时同时注入个人 workspace 记忆和项目 workspace 代码
+- **个人 workspace**：存放 CLAUDE.md、MEMORY.md、daily logs，每个员工独立
+- **项目 workspace**：Claude CLI 实际执行代码时 `--add-dir` 指向的代码库，可多员工共享
+- 启动 Claude CLI 时：以个人 workspace 为 `cwd`，用 `--add-dir` 挂载项目代码库
+- 成长记忆写在个人 workspace，代码修改发生在共享项目 workspace
 
 ---
 
@@ -240,23 +266,27 @@ AI 提炼：哪些值得长期记住？
 
 ---
 
-## 六、群聊中多 Agent 的记忆隔离
+## 六、群聊中多 Agent 的记忆共享与分工
 
-### 当前问题
-所有 Agent 共享同一个 `session_{group_id}.json`，记忆是平等的。但：
-- A 写的记忆 B 也能读到（有时合理，有时不合理）
-- 没有区分"群聊公共记忆"和"个人私有记忆"
+### 本系统的特性：单一用户，无隐私壁垒
 
-### 建议的记忆范围模型
+所有 Agent 都服务于同一个用户，因此：
+- Agent A 的记忆 Agent B 可以读到 → 完全合理，有助于协作
+- 关键区分不是"谁能看"，而是"谁负责写"
+
+### 建议的记忆归属模型
 
 ```
-群聊记忆（session_memory）       → 所有成员可读可写，公共决策/任务
-  └── type: decision / requirement / task / issue / summary
+群聊公共记忆（session_memory）    → 任何成员可写，全体成员可读
+  ├── 用途：项目决策、需求变更、任务分配、阶段摘要
+  └── 存储：data/memory/session_{group_id}.json（现有 MemoryStore）
 
-Agent 个人记忆（personal_memory） → 仅自身可读可写，个人学习/工作日志
-  └── workspaces/{agent_id}/memory/{date}.md
-  └── workspaces/{agent_id}/MEMORY.md（不在群聊注入）
+Agent 个人成长记忆（personal）    → 仅自身写，但群聊中也会注入（所有人可读）
+  ├── 用途：个人技能提升、习惯偏好、工作模式、教训
+  └── 存储：workspaces/{agent_id}/MEMORY.md + memory/{date}.md
 ```
+
+**实际效果**：开发者 A 在 MEMORY.md 里记下"这个项目用 JWT 鉴权"，架构师 B 下次回复时也能看到这个上下文，协作更顺畅。
 
 ---
 
@@ -288,8 +318,8 @@ Agent 个人记忆（personal_memory） → 仅自身可读可写，个人学习
 | 决策点 | 选项 A | 选项 B（推荐） | 理由 |
 |--------|--------|-------------|------|
 | 个人记忆存储 | 数据库统一管理 | 文件系统（workspace内） | 与 Claude CLI 天然集成，Agent 可直接读写 |
-| 群聊加载个人记忆 | 加载完整 MEMORY.md | 只加载近期日志 | 防止私密信息泄漏，Token 节省 |
-| Workspace 策略 | 完全共享 | 个人独立 + 项目可选共享 | 记忆隔离 + 协作兼顾 |
+| 群聊加载个人记忆 | 只加载近期日志 | 完整加载 MEMORY.md | 单用户场景，无隐私顾虑，精华记忆价值更高 |
+| Workspace 策略 | 完全共享 | 个人独立 + 项目可选共享 | 成长记忆独立 + 代码协作兼顾 |
 | 长对话处理 | 简单截断（现有） | 滚动摘要 + 检查点 | 防止关键上下文丢失 |
 | 记忆写入 | 仅上层主动写 | 上层 + Agent 主动标记 | 成长记忆需要 Agent 自己判断价值 |
 
@@ -302,21 +332,20 @@ Agent Arena/
 ├── workspaces/
 │   ├── developer/
 │   │   ├── CLAUDE.md          # 角色定义（现有）
-│   │   ├── SOUL.md            # 核心人格（新增）
-│   │   ├── MEMORY.md          # 精华长期记忆（新增，群聊不加载）
+│   │   ├── MEMORY.md          # 精华长期记忆（新增，每次调用都注入）
 │   │   └── memory/
 │   │       ├── 2026-02-26.md  # 今日工作日志（新增）
 │   │       └── 2026-02-25.md  # 昨日日志
 │   ├── tester/
 │   │   └── ...（同上结构）
-│   └── shared/                # 可选：共享项目代码库
+│   └── shared/                # 可选：共享项目代码库（--add-dir 挂载）
 │       └── ...（项目代码）
 │
 ├── data/
 │   └── memory/
 │       ├── session_{group_id}.json    # 群聊结构化记忆（现有 MemoryStore）
-│       └── summary_{group_id}.md     # 群聊滚动摘要（新增）
+│       └── summary_{group_id}.md     # 群聊滚动摘要（新增，解决长对话截断）
 │
 └── agents/
-    └── developer.yaml         # 增加 project_workspace 字段
+    └── developer.yaml         # 可增加 project_workspace 字段
 ```
