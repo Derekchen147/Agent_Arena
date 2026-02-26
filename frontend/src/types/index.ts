@@ -79,7 +79,8 @@ export type WSEvent =
   | { type: 'user_message'; message: StoredMessage }
   | { type: 'agent_message'; agent_id: string; content: string; turn_id: string }
   | { type: 'agent_status'; agent_id: string; status: AgentStatus; detail: string }
-  | { type: 'system_message'; content: string };
+  | { type: 'system_message'; content: string }
+  | { type: 'turn_log'; turn_id: string; agent_id: string; duration_ms: number; cost_usd: number; num_turns: number; input_tokens: number; output_tokens: number; tool_count: number; is_error: boolean };
 
 export type AgentStatus =
   | 'idle'
@@ -140,4 +141,44 @@ export interface UpdateAgentRequest {
   response_threshold: number;
   priority_keywords: string[];
   max_output_tokens: number;
+}
+
+// ── Call Logging Types ──
+
+export interface ToolCallLog {
+  name: string;
+  input: Record<string, unknown>;
+  output: string;
+}
+
+export interface CallLog {
+  log_id: string;
+  session_id: string;
+  turn_id: string;
+  agent_id: string;
+  agent_name: string;
+  invocation: string;
+  prompt_preview: string;
+  raw_output_preview: string;
+  content_preview: string;
+  duration_ms: number;
+  cost_usd: number;
+  num_turns: number;
+  input_tokens: number;
+  output_tokens: number;
+  tool_calls: ToolCallLog[];
+  is_error: boolean;
+  timestamp: string;
+}
+
+export interface TurnLogMeta {
+  turn_id: string;
+  agent_id: string;
+  duration_ms: number;
+  cost_usd: number;
+  num_turns: number;
+  input_tokens: number;
+  output_tokens: number;
+  tool_count: number;
+  is_error: boolean;
 }

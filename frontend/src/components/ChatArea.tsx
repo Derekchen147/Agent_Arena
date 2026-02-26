@@ -206,6 +206,7 @@ export default function ChatArea({
         skipHtml={false}
         rehypePlugins={[rehypeRaw]}
         components={markdownComponents}
+        breaks
       >
         {processed}
       </ReactMarkdown>

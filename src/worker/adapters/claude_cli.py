@@ -61,12 +61,6 @@ class ClaudeCliAdapter(BaseAdapter):
     ) -> AgentOutput:
         """在 workspace_dir 下执行 claude -p "prompt" --output-format json，解析 JSON 或纯文本为 AgentOutput。"""
         prompt = self._build_prompt(input)
-        logger.info("[CALL] claude_cli assembled prompt =====> / %s", prompt)
-
-        cmd = ["claude", "-p", prompt, "--output-format", "json"]
-        cmd.extend(self.extra_args)
-        logger.info(f"[CALL] claude_cli.cmd: cmd: {cmd}")
-
         logger.info(
             "[CALL] claude_cli.invoke: agent_id=%s workspace_dir=%s prompt_len=%d extra_args=%s",
             input.agent_id,
@@ -74,7 +68,10 @@ class ClaudeCliAdapter(BaseAdapter):
             len(prompt),
             self.extra_args,
         )
-        logger.info("[CALL] claude_cli assembled prompt =====> / %s", prompt)
+        logger.info("[CALL] claude_cli assembled prompt =====> %s", prompt)
+
+        cmd = ["claude", "-p", prompt, "--output-format", "stream-json"]
+        cmd.extend(self.extra_args)
 
         run_env = _subprocess_env(self.env)
 
@@ -111,7 +108,10 @@ class ClaudeCliAdapter(BaseAdapter):
                 input.agent_id,
                 len(raw_output),
             )
-            return self._parse_output(raw_output, input)
+            logger.info("[CALL] claude_cli raw_output =====> %s", raw_output[:3000])
+            result = self._parse_output(raw_output, input, prompt)
+            logger.info("[CALL] claude_cli parsed content =====> %s", result.content[:1000])
+            return result
 
         except subprocess.TimeoutExpired:
             logger.error(
@@ -222,30 +222,105 @@ class ClaudeCliAdapter(BaseAdapter):
 
         return "\n".join(parts)
 
-    def _parse_output(self, raw_output: str, input: AgentInput) -> AgentOutput:
-        """从 CLI 输出中解析正文：优先 JSON 的 result/content，再处理 SKIP 与 NEXT_MENTIONS。"""
-        content = raw_output
+    def _parse_output(self, raw_output: str, input: AgentInput, prompt: str = "") -> AgentOutput:
+        """解析 --output-format stream-json 的 NDJSON 输出。
 
-        try:
-            data = json.loads(raw_output)
-            if isinstance(data, dict):
-                content = data.get("result", data.get("content", raw_output))
-            elif isinstance(data, list):
-                text_parts = [
-                    block.get("text", "")
-                    for block in data
-                    if isinstance(block, dict) and block.get("type") == "text"
-                ]
-                content = "\n".join(text_parts) if text_parts else raw_output
-        except json.JSONDecodeError:
-            content = raw_output
+        每行一个 JSON 事件：
+        - type=assistant: 助手消息（含 text 块和 tool_use 块）
+        - type=user: 工具调用结果
+        - type=result: 最终结果（含 duration_ms, total_cost_usd 等）
+        """
+        from src.models.protocol import ExecutionMeta, ToolCall
+
+        tool_calls: list[ToolCall] = []
+        tool_use_map: dict[str, ToolCall] = {}  # tool_use_id -> ToolCall
+        total_input_tokens = 0
+        total_output_tokens = 0
+        meta = ExecutionMeta()
+        final_result_text: str | None = None
+
+        for line in raw_output.strip().split('\n'):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+
+            event_type = event.get("type", "")
+
+            if event_type == "assistant":
+                msg = event.get("message", {})
+                usage = msg.get("usage", {})
+                total_input_tokens += usage.get("input_tokens", 0)
+                total_output_tokens += usage.get("output_tokens", 0)
+                for block in msg.get("content", []):
+                    if block.get("type") == "tool_use":
+                        tc = ToolCall(
+                            name=block.get("name", ""),
+                            input=block.get("input", {}),
+                        )
+                        tool_calls.append(tc)
+                        tool_use_map[block.get("id", "")] = tc
+
+            elif event_type == "user":
+                msg = event.get("message", {})
+                for block in msg.get("content", []):
+                    if block.get("type") == "tool_result":
+                        tool_id = block.get("tool_use_id", "")
+                        if tool_id in tool_use_map:
+                            result_content = block.get("content", "")
+                            if isinstance(result_content, list):
+                                output_text = " ".join(
+                                    b.get("text", "") for b in result_content
+                                    if isinstance(b, dict) and b.get("type") == "text"
+                                )
+                            elif isinstance(result_content, str):
+                                output_text = result_content
+                            else:
+                                output_text = ""
+                            tool_use_map[tool_id].output = output_text[:300]
+
+            elif event_type == "result":
+                meta.duration_ms = event.get("duration_ms", 0)
+                meta.cost_usd = event.get("total_cost_usd", 0.0)
+                meta.num_turns = event.get("num_turns", 0)
+                meta.is_error = event.get("is_error", False)
+                meta.cli_session_id = event.get("session_id", "")
+                if not meta.is_error:
+                    final_result_text = event.get("result", "")
+
+        meta.input_tokens = total_input_tokens
+        meta.output_tokens = total_output_tokens
+        meta.tool_calls = tool_calls
+
+        # 兜底：如果没有解析到 result，尝试把整个 raw_output 当单个 JSON 处理
+        content = final_result_text
+        if content is None:
+            try:
+                data = json.loads(raw_output)
+                if isinstance(data, dict):
+                    content = data.get("result", data.get("content", ""))
+                    meta.duration_ms = data.get("duration_ms", meta.duration_ms)
+                    meta.cost_usd = data.get("total_cost_usd", meta.cost_usd)
+                    meta.num_turns = data.get("num_turns", meta.num_turns)
+                elif isinstance(data, list):
+                    content = "\n".join(
+                        b.get("text", "") for b in data
+                        if isinstance(b, dict) and b.get("type") == "text"
+                    )
+            except json.JSONDecodeError:
+                content = raw_output
+
+        content = content or ""
 
         should_respond = True
         if content.strip() == "SKIP" or content.strip().startswith("SKIP"):
             should_respond = False
             content = ""
 
-        next_mentions = []
+        next_mentions: list[str] = []
         mention_match = re.search(r"<!--NEXT_MENTIONS:(\[.*?\])-->", content)
         if mention_match:
             try:
@@ -258,4 +333,6 @@ class ClaudeCliAdapter(BaseAdapter):
             content=content,
             next_mentions=next_mentions,
             should_respond=should_respond,
+            execution_meta=meta,
+            prompt_sent=prompt,
         )

@@ -6,6 +6,7 @@ import GroupSidebar from './components/GroupSidebar';
 import ChatArea from './components/ChatArea';
 import AgentPanel from './components/AgentPanel';
 import AgentManagement from './components/AgentManagement';
+import LogPanel from './components/LogPanel';
 import './App.css';
 
 export default function App() {
@@ -15,6 +16,7 @@ export default function App() {
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [agents, setAgents] = useState<AgentProfile[]>([]);
   const [messages, setMessages] = useState<StoredMessage[]>([]);
+  const [rightPanel, setRightPanel] = useState<'members' | 'logs'>('members');
 
   // Load groups and agents on mount
   useEffect(() => {
@@ -104,7 +106,7 @@ export default function App() {
     [selectedGroupId],
   );
 
-  const { connected, agentStatuses } = useWebSocket({
+  const { connected, agentStatuses, turnLogMap } = useWebSocket({
     groupId: selectedGroupId,
     onUserMessage,
     onAgentMessage,
@@ -160,15 +162,40 @@ export default function App() {
         setMessages={setMessages}
         onSendMessage={handleSendMessage}
         connected={connected}
+        turnLogMap={turnLogMap}
       />
-      <AgentPanel
-        agents={agents}
-        group={selectedGroup}
-        agentStatuses={agentStatuses}
-        onGroupChanged={handleGroupChanged}
-        onAgentsChanged={loadAgents}
-        onViewAgents={() => setView('agents')}
-      />
+      <div className="right-panel-wrapper">
+        <div className="right-panel-tabs">
+          <button
+            className={`right-tab ${rightPanel === 'members' ? 'active' : ''}`}
+            onClick={() => setRightPanel('members')}
+          >
+            👥 成员
+          </button>
+          <button
+            className={`right-tab ${rightPanel === 'logs' ? 'active' : ''}`}
+            onClick={() => setRightPanel('logs')}
+          >
+            📋 日志
+          </button>
+        </div>
+        {rightPanel === 'members' ? (
+          <AgentPanel
+            agents={agents}
+            group={selectedGroup}
+            agentStatuses={agentStatuses}
+            onGroupChanged={handleGroupChanged}
+            onAgentsChanged={loadAgents}
+            onViewAgents={() => setView('agents')}
+          />
+        ) : (
+          <LogPanel
+            groupId={selectedGroupId}
+            agents={agents}
+            turnLogMap={turnLogMap}
+          />
+        )}
+      </div>
     </div>
   );
 }

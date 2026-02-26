@@ -41,6 +41,25 @@ class Attachment(BaseModel):
     data: str = ""
 
 
+class ToolCall(BaseModel):
+    """单次工具调用记录：名称、输入参数与输出摘要。"""
+    name: str = ""
+    input: dict = Field(default_factory=dict)
+    output: str = ""  # 截断后的输出摘要
+
+
+class ExecutionMeta(BaseModel):
+    """Agent 单次 CLI 调用的执行元数据（来自 stream-json 输出）。"""
+    duration_ms: int = 0
+    cost_usd: float = 0.0
+    num_turns: int = 0
+    input_tokens: int = 0
+    output_tokens: int = 0
+    tool_calls: list[ToolCall] = Field(default_factory=list)
+    is_error: bool = False
+    cli_session_id: str = ""
+
+
 class Peer(BaseModel):
     """群组中的同事摘要，用于让 Agent 了解可协作的成员（不含自身）。"""
 
@@ -77,3 +96,5 @@ class AgentOutput(BaseModel):
     status_updates: list[StatusEvent] = Field(default_factory=list)
     attachments: list[Attachment] = Field(default_factory=list)
     should_respond: bool = True   # may_reply 时由 Agent 自行决定是否回复
+    execution_meta: ExecutionMeta | None = None
+    prompt_sent: str = ""   # 完整 prompt，供 Orchestrator 写日志用，不广播给前端

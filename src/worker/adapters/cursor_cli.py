@@ -21,10 +21,11 @@ import re
 import shutil
 import subprocess
 import tempfile
+import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Callable
 
-from src.models.protocol import AgentInput, AgentOutput
+from src.models.protocol import AgentInput, AgentOutput, ExecutionMeta
 from src.worker.adapters.base import BaseAdapter
 
 logger = logging.getLogger(__name__)
@@ -97,6 +98,7 @@ class CursorCliAdapter(BaseAdapter):
         logger.info("[CALL] cursor_cli assembled prompt =====> / %s",prompt)
 
         run_env = _subprocess_env(self.env)
+        start_time = time.monotonic()
 
         # Windows 上 agent 安装为 .CMD 文件，即使 subprocess 用列表模式，
         # Python 也会通过 cmd.exe 执行 .cmd，而 cmd.exe 会在换行处截断参数。
@@ -152,6 +154,7 @@ class CursorCliAdapter(BaseAdapter):
         try:
             loop = asyncio.get_event_loop()
             process = await loop.run_in_executor(_executor, _run_cmd)
+            duration_ms = int((time.monotonic() - start_time) * 1000)
         except subprocess.TimeoutExpired:
             logger.error(
                 "[CALL] Cursor CLI timeout: agent_id=%s timeout=%ss",
@@ -199,14 +202,18 @@ class CursorCliAdapter(BaseAdapter):
             return AgentOutput(
                 content=f"[CLI Error] {err or raw_output}",
                 should_respond=True,
+                execution_meta=ExecutionMeta(duration_ms=duration_ms, is_error=True),
+                prompt_sent=prompt,
             )
 
         logger.info(
-            "[CALL] cursor_cli: agent_id=%s exit 0 output_len=%d",
+            "[CALL] cursor_cli: agent_id=%s exit 0 output_len=%d duration_ms=%d",
             input.agent_id,
             len(raw_output),
+            duration_ms,
         )
-        return self._parse_output(raw_output, input)
+        logger.info("[CALL] cursor_cli raw_output =====> %s", raw_output[:3000])
+        return self._parse_output(raw_output, input, prompt, duration_ms)
 
     async def health_check(self, workspace_dir: str) -> bool:
         """执行 agent --version 或简短 -p 判断 CLI 是否可用（线程池执行，兼容 Windows）。"""
@@ -313,7 +320,7 @@ class CursorCliAdapter(BaseAdapter):
 
         return "\n".join(parts)
 
-    def _parse_output(self, raw_output: str, input: AgentInput) -> AgentOutput:
+    def _parse_output(self, raw_output: str, input: AgentInput, prompt: str = "", duration_ms: int = 0) -> AgentOutput:
         """从 CLI 输出解析：优先 JSON 的 result/content，再处理 SKIP 与 NEXT_MENTIONS。"""
         content = raw_output
 
@@ -345,8 +352,12 @@ class CursorCliAdapter(BaseAdapter):
                 pass
             content = re.sub(r"<!--NEXT_MENTIONS:\[.*?\]-->", "", content).strip()
 
+        meta = ExecutionMeta(duration_ms=duration_ms)
+        logger.info("[CALL] cursor_cli parsed content =====> %s", content[:1000])
         return AgentOutput(
             content=content,
             next_mentions=next_mentions,
             should_respond=should_respond,
+            execution_meta=meta,
+            prompt_sent=prompt,
         )

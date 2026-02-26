@@ -21,6 +21,7 @@ if sys.platform == "win32":
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
+from src.core.call_logger import CallLogger
 from src.api.routes_agent import router as agent_router
 from src.api.routes_group import router as group_router
 from src.api.routes_message import router as message_router
@@ -55,6 +56,7 @@ class AppState:
     worker_runtime: WorkerRuntime
     orchestrator: Orchestrator
     workspace_manager: WorkspaceManager
+    call_logger: CallLogger
 
 
 # 全局状态（供路由模块导入使用）
@@ -75,6 +77,7 @@ async def lifespan(app: FastAPI):
     # 初始化 Agent 注册表、记忆存储、WebSocket 广播、工作区管理
     registry = AgentRegistry(config_dir="agents/")
     memory_store = MemoryStore(memory_dir="data/memory")
+    call_logger = CallLogger(log_dir="data/logs")
     personal_memory = PersonalMemoryManager()
     session_summary = SessionSummaryManager(memory_dir="data/memory")
     ws_manager = WebSocketManager()
@@ -102,6 +105,7 @@ async def lifespan(app: FastAPI):
         memory_store=memory_store,
         personal_memory=personal_memory,
         session_summary=session_summary,
+        call_logger=call_logger,
     )
 
     # 将各组件挂到全局状态，供路由与 WebSocket 使用
@@ -114,6 +118,7 @@ async def lifespan(app: FastAPI):
         worker_runtime=worker_runtime,
         orchestrator=orchestrator,
         workspace_manager=workspace_manager,
+        call_logger=call_logger,
     )
 
     agent_count = len(registry.agents)

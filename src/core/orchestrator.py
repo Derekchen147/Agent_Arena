@@ -20,6 +20,7 @@ import uuid
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from src.core.call_logger import CallLogger
 from src.models.protocol import AgentOutput
 from src.models.session import GroupConfig
 
@@ -73,6 +74,7 @@ class Orchestrator:
         memory_store: MemoryStore | None = None,
         personal_memory: PersonalMemoryManager | None = None,
         session_summary: SessionSummaryManager | None = None,
+        call_logger: CallLogger | None = None,
     ):
         self.session_manager = session_manager
         self.context_builder = context_builder
@@ -83,6 +85,7 @@ class Orchestrator:
         self.memory_store = memory_store
         self.personal_memory = personal_memory
         self.session_summary = session_summary
+        self.call_logger = call_logger
 
     async def on_new_message(
         self,
@@ -167,6 +170,10 @@ class Orchestrator:
                     continue
                 output: AgentOutput = result
                 output = await self._process_memory_markers(output, agent_id, group_id)
+                # 保存调用日志 + 广播 turn_log 事件
+                await self._save_call_log_and_broadcast(
+                    output, agent_id, group_id, turn.turn_id
+                )
                 await self.session_manager.save_message(
                     group_id=group_id,
                     author_id=agent_id,
@@ -215,6 +222,10 @@ class Orchestrator:
                 if not output.should_respond:
                     continue
                 output = await self._process_memory_markers(output, agent_id, group_id)
+                # 保存调用日志 + 广播 turn_log 事件
+                await self._save_call_log_and_broadcast(
+                    output, agent_id, group_id, turn.turn_id
+                )
                 await self.session_manager.save_message(
                     group_id=group_id,
                     author_id=agent_id,
@@ -360,6 +371,55 @@ class Orchestrator:
             self.worker_runtime.invoke_agent(agent_id, agent_input),
             timeout=turn.timeout_seconds,
         )
+
+    async def _save_call_log_and_broadcast(
+        self,
+        output: AgentOutput,
+        agent_id: str,
+        group_id: str,
+        turn_id: str,
+    ) -> None:
+        """保存调用日志到文件，并通过 WebSocket 广播 turn_log 摘要事件。"""
+        from src.core.call_logger import CallLog
+        meta = output.execution_meta
+        profile = self.registry.get_agent(agent_id)
+
+        if self.call_logger and meta:
+            log = CallLog(
+                log_id=f"{turn_id}-{agent_id}",
+                session_id=group_id,
+                turn_id=turn_id,
+                agent_id=agent_id,
+                agent_name=profile.name if profile else agent_id,
+                prompt_preview=output.prompt_sent or "",
+                raw_output_preview="",  # raw_output not available here, recorded via adapter
+                content_preview=output.content or "",
+                duration_ms=meta.duration_ms,
+                cost_usd=meta.cost_usd,
+                num_turns=meta.num_turns,
+                input_tokens=meta.input_tokens,
+                output_tokens=meta.output_tokens,
+                tool_calls=[
+                    {"name": tc.name, "input": tc.input, "output": tc.output}
+                    for tc in meta.tool_calls
+                ],
+                is_error=meta.is_error,
+            )
+            self.call_logger.save(log)
+
+        if self.ws_manager and meta:
+            await self.ws_manager.broadcast_message(group_id, {
+                "type": "turn_log",
+                "turn_id": turn_id,
+                "agent_id": agent_id,
+                "duration_ms": meta.duration_ms,
+                "cost_usd": meta.cost_usd,
+                "num_turns": meta.num_turns,
+                "input_tokens": meta.input_tokens,
+                "output_tokens": meta.output_tokens,
+                "tool_count": len(meta.tool_calls),
+                "is_error": meta.is_error,
+            })
 
     def _parse_mentions(self, content: str, agent_ids: list[str]) -> list[str]:
         """从消息正文解析 @xxx：支持 @all/@所有人、agent_id 或 agent 名称匹配。

@@ -74,3 +74,13 @@ async def send_message(req: SendMessageRequest):
     )
 
     return {"message": stored.model_dump(mode="json"), "status": "processing"}
+
+
+@router.get("/logs/{group_id}")
+async def get_call_logs(group_id: str):
+    """获取指定群聊会话的所有调用日志（最新在前）。"""
+    from src.main import app_state
+    if not hasattr(app_state, 'call_logger') or not app_state.call_logger:
+        return {"logs": []}
+    logs = app_state.call_logger.get_session_logs(group_id)
+    return {"logs": [log.model_dump(mode="json") for log in logs]}
