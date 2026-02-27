@@ -141,3 +141,55 @@ export interface UpdateAgentRequest {
   priority_keywords: string[];
   max_output_tokens: number;
 }
+
+// ── Auth Models ──
+
+export type LoginType = 'openlibing';
+
+export interface UserInfo {
+  account_id: string;
+  username: string;
+  email: string | | null;
+  phone: string | null;
+  avatar: string | null;
+  token: string;
+  refresh_token: string;
+  login_type: LoginType;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LoginRequest {
+  login_type: LoginType;
+  client_name: string;
+}
+
+export interface LoginResponse {
+  success: boolean;
+  message: string;
+  login_url: string | null;
+  state: string | null;
+}
+
+export interface LogoutResponse {
+  success: boolean;
+  message: string;
+}
+
+export interface UserInfoResponse {
+  account_id: string;
+  username: string;
+  email: string | null;
+  login_type: LoginType;
+  is_logged_in: boolean;
+}
+
+export interface OpenLibingAuthCallback {
+  code: string;
+  state: string;
+}
+
+export interface AuthStatusResponse {
+  is_logged_in: boolean;
+  login_type: LoginType | null;
+}
