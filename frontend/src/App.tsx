@@ -11,6 +11,9 @@ import LogPanel from './components/LogPanel';
 import LoginModal from './components/LoginModal';
 import './App.css';
 
+// 测试开关：设为 true 可跳过登录
+const SKIP_AUTH = true;
+
 export default function App() {
   const [view, setView] = useState<'chat' | 'agents'>('chat');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -29,6 +32,13 @@ export default function App() {
   }, []);
 
   const checkAuthStatus = async () => {
+    if (SKIP_AUTH) {
+      setIsLoggedIn(true);
+      loadGroups();
+      loadAgents();
+      return;
+    }
+
     try {
       const status = await getAuthStatus();
       setIsLoggedIn(status.is_logged_in);
