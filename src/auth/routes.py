@@ -37,6 +37,7 @@ async def login(request: LoginRequest) -> LoginResponse:
     return await auth_service.login(
         login_type=request.login_type,
         client_name=request.client_name,
+        redirect_uri=request.redirect_uri,
     )
 
 
