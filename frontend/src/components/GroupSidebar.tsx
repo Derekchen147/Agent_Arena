@@ -53,7 +53,11 @@ export default function GroupSidebar({
     <div className="group-sidebar">
       <div className="sidebar-header">
         <h2>Agent Arena</h2>
-        <button className="btn-icon" onClick={() => setShowCreate(true)} title="新建群组">
+        <button
+          className="btn-icon"
+          onClick={() => setShowCreate(true)}
+          title="新建群组"
+        >
           +
         </button>
       </div>

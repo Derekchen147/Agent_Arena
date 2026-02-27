@@ -25,6 +25,9 @@ from src.api.routes_agent import router as agent_router
 from src.api.routes_group import router as group_router
 from src.api.routes_message import router as message_router
 from src.api.websocket import WebSocketManager
+from src.auth.routes import router as auth_router
+from src.auth.service import AuthService
+from src.auth.storage import AuthStorage
 from src.core.context_builder import ContextBuilder
 from src.core.orchestrator import Orchestrator
 from src.core.session_manager import SessionManager
@@ -53,6 +56,8 @@ class AppState:
     worker_runtime: WorkerRuntime
     orchestrator: Orchestrator
     workspace_manager: WorkspaceManager
+    auth_service: AuthService
+    auth_storage: AuthStorage
 
 
 # 全局状态（供路由模块导入使用）
@@ -69,6 +74,12 @@ async def lifespan(app: FastAPI):
     # 初始化数据层：会话与群组、消息的持久化
     session_manager = SessionManager(db_path="data/agent_arena.db")
     await session_manager.initialize()
+
+    # 初始化认证服务
+    auth_storage = AuthStorage(db_path="data/agent_arena.db")
+    await auth_storage.initialize()
+    auth_service = AuthService(storage=auth_storage)
+    await auth_service.initialize()
 
     # 初始化 Agent 注册表、记忆存储、WebSocket 广播、工作区管理
     registry = AgentRegistry(config_dir="agents/")
@@ -105,6 +116,8 @@ async def lifespan(app: FastAPI):
         worker_runtime=worker_runtime,
         orchestrator=orchestrator,
         workspace_manager=workspace_manager,
+        auth_service=auth_service,
+        auth_storage=auth_storage,
     )
 
     agent_count = len(registry.agents)
@@ -115,6 +128,7 @@ async def lifespan(app: FastAPI):
     # 关闭阶段：先停 Worker，再关闭数据库连接
     logger.info("Shutting down Agent Arena...")
     await worker_runtime.shutdown()
+    await auth_service.close()
     await session_manager.close()
 
 
@@ -135,7 +149,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 挂载业务路由：群组、消息、Agent；顺序影响前缀与优先级
+# 挂载业务路由：认证、群组、消息、Agent；顺序影响前缀与优先级
+app.include_router(auth_router)
 app.include_router(group_router)
 app.include_router(message_router)
 app.include_router(agent_router)
