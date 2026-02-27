@@ -1,6 +1,6 @@
 .group-sidebar {
-  width: 260px;
-  min-width: 260px;
+  width: 260.5px;
+  min-width: 260.5px;
   background: #ffffff;
   color: #1d1d1f;
   display: flex;
@@ -14,6 +14,8 @@
   justify-content: space-between;
   padding: 16px;
   border-bottom: 1px solid #e5e5e7;
+  min-height: 60px;
+  background: #ffffff;
 }
 
 .sidebar-header h2 {
@@ -24,22 +26,74 @@
 }
 
 .btn-icon {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
   border: none;
-  border-radius: 8px;
-  background: #f5f5f7;
-  color: #1d1d1f;
-  font-size: 20px;
+  border-radius: 50%;
+  background: #0071e3;
+  color: #ffffff;
+  font-size: 28px;
+  font-weight: bold;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: background 0.2s;
+  line-height: 1;
+  padding: 0;
+  flex-shrink: 0;
+  margin: 0;
+  box-shadow: 0 2px 8px rgba(0, 113, 227, 0.3);
 }
 
 .btn-icon:hover {
-  background: #e8e8ed;
+  background: #0077ed;
+}
+
+.sidebar-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 16px !important;
+  border-bottom: 1px solid #e5e5e7 !important;
+  min-height: 60px !important;
+  background: #ffffff !important;
+}
+
+.sidebar-header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1d1d1f;
+}
+
+.btn-icon {
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+  min-height: 36px !important;
+  border: none !important;
+  border-radius: 50% !important;
+  background: #0071e3 !important;
+  color: #ffffff !important;
+  font-size: 28px !important;
+  font-weight: bold !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: background 0.2s !important;
+  line-height: 1 !important;
+  padding: 0 !important;
+  flex-shrink: 0 !important;
+  margin: 0 !important;
+  box-shadow: 0 2px 8px rgba(0, 113, 227, 0.3) !important;
+}
+
+.btn-icon:hover {
+  background: #0077ed;
 }
 
 .group-list {
@@ -125,7 +179,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
+  z-index: 3000;
 }
 
 .modal {

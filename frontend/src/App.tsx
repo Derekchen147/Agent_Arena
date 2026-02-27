@@ -1,16 +1,21 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { Group, StoredMessage, AgentProfile, WSEvent } from './types';
+import type { Group, StoredMessage, AgentProfile, WSEvent, UserInfoResponse } from './types';
 import { listGroups, getGroup, listAgents, sendMessage } from './api/client';
+import { getAuthStatus, getUserInfo, logout } from './api/authClient';
 import { useWebSocket } from './hooks/useWebSocket';
 import GroupSidebar from './components/GroupSidebar';
 import ChatArea from './components/ChatArea';
 import AgentPanel from './components/AgentPanel';
 import AgentManagement from './components/AgentManagement';
 import LogPanel from './components/LogPanel';
+import LoginModal from './components/LoginModal';
 import './App.css';
 
 export default function App() {
   const [view, setView] = useState<'chat' | 'agents'>('chat');
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userInfo, setUserInfo] = useState<UserInfoResponse | null>(null);
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const [groups, setGroups] = useState<Group[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
@@ -18,11 +23,46 @@ export default function App() {
   const [messages, setMessages] = useState<StoredMessage[]>([]);
   const [rightPanel, setRightPanel] = useState<'members' | 'logs'>('members');
 
-  // Load groups and agents on mount
+  // Check auth status on mount
   useEffect(() => {
-    loadGroups();
-    loadAgents();
+    checkAuthStatus();
   }, []);
+
+  const checkAuthStatus = async () => {
+    try {
+      const status = await getAuthStatus();
+      setIsLoggedIn(status.is_logged_in);
+
+      if (status.is_logged_in) {
+        const info = await getUserInfo();
+        setUserInfo(info);
+        loadGroups();
+        loadAgents();
+      } else {
+        setShowLoginModal(true);
+      }
+    } catch (err) {
+      console.error('Failed to check auth status:', err);
+      setShowLoginModal(true);
+    }
+  };
+
+  const handleLoginSuccess = () => {
+    setIsLoggedIn(true);
+    setShowLoginModal(false);
+    checkAuthStatus();
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setIsLoggedIn(false);
+      setUserInfo(null);
+      setShowLoginModal(true);
+    } catch (err) {
+      console.error('Failed to logout:', err);
+    }
+  };
 
   const loadGroups = async () => {
     try {
@@ -149,52 +189,71 @@ export default function App() {
 
   return (
     <div className="app-layout">
-      <GroupSidebar
-        groups={groups}
-        selectedGroupId={selectedGroupId}
-        onSelectGroup={setSelectedGroupId}
-        onGroupsChanged={loadGroups}
-      />
-      <ChatArea
-        group={selectedGroup}
-        agents={agents}
-        messages={messages}
-        setMessages={setMessages}
-        onSendMessage={handleSendMessage}
-        connected={connected}
-        turnLogMap={turnLogMap}
-      />
-      <div className="right-panel-wrapper">
-        <div className="right-panel-tabs">
-          <button
-            className={`right-tab ${rightPanel === 'members' ? 'active' : ''}`}
-            onClick={() => setRightPanel('members')}
-          >
-            👥 成员
-          </button>
-          <button
-            className={`right-tab ${rightPanel === 'logs' ? 'active' : ''}`}
-            onClick={() => setRightPanel('logs')}
-          >
-            📋 日志
-          </button>
+      {showLoginModal && (
+        <LoginModal
+          onLoginSuccess={handleLoginSuccess}
+        />
+      )}
+
+      {isLoggedIn && (
+        <div className="app-header">
+          <div className="header-left"></div>
+          <div className="header-right">
+            <span className="user-info">{userInfo?.username}</span>
+            <button className="logout-button" onClick={handleLogout}>
+              退出登录
+            </button>
+          </div>
         </div>
-        {rightPanel === 'members' ? (
-          <AgentPanel
-            agents={agents}
-            group={selectedGroup}
-            agentStatuses={agentStatuses}
-            onGroupChanged={handleGroupChanged}
-            onAgentsChanged={loadAgents}
-            onViewAgents={() => setView('agents')}
-          />
-        ) : (
-          <LogPanel
-            groupId={selectedGroupId}
-            agents={agents}
-            turnLogMap={turnLogMap}
-          />
-        )}
+      )}
+
+      <div className="app-main">
+        <GroupSidebar
+          groups={groups}
+          selectedGroupId={selectedGroupId}
+          onSelectGroup={setSelectedGroupId}
+          onGroupsChanged={loadGroups}
+        />
+        <ChatArea
+          group={selectedGroup}
+          agents={agents}
+          messages={messages}
+          setMessages={setMessages}
+          onSendMessage={handleSendMessage}
+          connected={connected}
+        />
+        <div className="right-panel-wrapper">
+          <div className="right-panel-tabs">
+            <button
+              className={`right-tab ${rightPanel === 'members' ? 'active' : ''}`}
+              onClick={() => setRightPanel('members')}
+            >
+              👥 成员
+            </button>
+            <button
+              className={`right-tab ${rightPanel === 'logs' ? 'active' : ''}`}
+              onClick={() => setRightPanel('logs')}
+            >
+              📋 日志
+            </button>
+          </div>
+          {rightPanel === 'members' ? (
+            <AgentPanel
+              agents={agents}
+              group={selectedGroup}
+              agentStatuses={agentStatuses}
+              onGroupChanged={handleGroupChanged}
+              onAgentsChanged={loadAgents}
+              onViewAgents={() => setView('agents')}
+            />
+          ) : (
+            <LogPanel
+              groupId={selectedGroupId}
+              agents={agents}
+              turnLogMap={turnLogMap}
+            />
+          )}
+        </div>
       </div>
     </div>
   );
