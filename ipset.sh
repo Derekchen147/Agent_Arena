@@ -8,11 +8,16 @@
 $httpPort = "7897"  # 比如：7890/7892/10809
 $socksPort = "7897"  # 比如：7891/7893/10808
 
-# 设置代理（用你的真实端口）
+# 设置代理powershell（用你的真实端口）
 $env:HTTP_PROXY="http://127.0.0.1:7897"
 $env:HTTPS_PROXY="http://127.0.0.1:7897"
 $env:ALL_PROXY="socks5://127.0.0.1:7897"
 cd D:\projects\Agent_Arena
+
+# 设置代理powershell（用你的真实端口）
+set HTTP_PROXY=http://127.0.0.1:7897
+set HTTPS_PROXY=http://127.0.0.1:7897
+gemini -p "hello" --output-format "json"
 
 # 更严谨的验证（分步排查问题）
 Write-Host "🔍 正在检测端口 $httpPort 是否被 Clash 占用..."
