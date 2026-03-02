@@ -221,16 +221,53 @@ class GeminiCliAdapter(BaseAdapter):
         return "\n".join(parts)
 
     def _parse_output(self, raw_output: str, input: AgentInput, prompt: str = "", duration_ms: int = 0) -> AgentOutput:
-        """从 CLI 输出解析。"""
-        content = raw_output
-
-        # 尝试解析 JSON
+        """从 CLI 输出解析。支持单个 JSON 对象或 NDJSON 格式。"""
+        content = ""
+        meta = ExecutionMeta(duration_ms=duration_ms)
+        
+        # 尝试解析为单个 JSON
         try:
             data = json.loads(raw_output)
             if isinstance(data, dict):
-                # 兼容不同的输出字段
-                content = data.get("result", data.get("content", raw_output))
+                # 1. 提取回复内容 (优先级: response > result > content)
+                content = data.get("response", data.get("result", data.get("content", "")))
+                
+                # 2. 提取统计信息
+                if "stats" in data:
+                    stats = data["stats"]
+                    logger.info("[CALL] Gemini CLI Stats: %s", json.dumps(stats, ensure_ascii=False))
+                    
+                    # 累加所有模型的 token 消耗
+                    models_stats = stats.get("models", {})
+                    total_input = 0
+                    total_output = 0
+                    for m_name, m_data in models_stats.items():
+                        t = m_data.get("tokens", {})
+                        total_input += t.get("input", t.get("prompt", 0))
+                        total_output += t.get("candidates", t.get("output", 0))
+                    
+                    meta.input_tokens = total_input
+                    meta.output_tokens = total_output
+                    
+                    # 提取工具调用摘要
+                    tools_stats = stats.get("tools", {})
+                    total_calls = tools_stats.get("totalCalls", 0)
+                    
+                    # 记录详细日志
+                    if total_input > 0 or total_output > 0:
+                        logger.info("[CALL] Gemini Usage: input_tokens=%d, output_tokens=%d", total_input, total_output)
+                    if total_calls > 0:
+                        logger.info("[CALL] Gemini Tools: total_calls=%d, success=%d, fail=%d", 
+                                    total_calls, 
+                                    tools_stats.get("totalSuccess", 0),
+                                    tools_stats.get("totalFail", 0))
+
+                # 3. 提取会话 ID
+                if "session_id" in data:
+                    meta.cli_session_id = data["session_id"]
+
             elif isinstance(data, list):
+                # 兼容某些返回列表的格式
                 text_parts = [
                     block.get("text", "")
                     for block in data
@@ -238,26 +275,48 @@ class GeminiCliAdapter(BaseAdapter):
                 ]
                 content = "\n".join(text_parts) if text_parts else raw_output
         except json.JSONDecodeError:
-            # 如果不是 JSON，可能是 NDJSON 或纯文本
-            # 处理 NDJSON (类似 Claude CLI)
+            # 尝试处理 NDJSON (每行一个 JSON 对象)
             final_result_text = None
+            total_input = 0
+            total_output = 0
+            
             for line in raw_output.strip().split('\n'):
                 line = line.strip()
                 if not line: continue
                 try:
                     event = json.loads(line)
-                    if event.get("type") == "result":
+                    # 兼容 Claude CLI 风格的事件
+                    event_type = event.get("type")
+                    if event_type == "result":
                         final_result_text = event.get("result")
+                        meta.duration_ms = event.get("duration_ms", meta.duration_ms)
+                        meta.cli_session_id = event.get("session_id", "")
+                    elif event_type == "assistant":
+                        usage = event.get("message", {}).get("usage", {})
+                        total_input += usage.get("input_tokens", 0)
+                        total_output += usage.get("output_tokens", 0)
                 except json.JSONDecodeError:
                     continue
-            if final_result_text:
+            
+            if final_result_text is not None:
                 content = final_result_text
+                meta.input_tokens = total_input
+                meta.output_tokens = total_output
+            else:
+                # 既不是 JSON 也不是有效的 NDJSON，作为纯文本处理
+                content = raw_output
 
+        # 确保 content 是字符串
+        if not isinstance(content, str):
+            content = str(content)
+
+        # 处理 SKIP 逻辑
         should_respond = True
         if content.strip() == "SKIP" or content.strip().startswith("SKIP"):
             should_respond = False
             content = ""
 
+        # 解析 NEXT_MENTIONS
         next_mentions = []
         mention_match = re.search(r"<!--NEXT_MENTIONS:(\[.*?\])-->", content)
         if mention_match:
@@ -267,7 +326,6 @@ class GeminiCliAdapter(BaseAdapter):
                 pass
             content = re.sub(r"<!--NEXT_MENTIONS:\[.*?\]-->", "", content).strip()
 
-        meta = ExecutionMeta(duration_ms=duration_ms)
         return AgentOutput(
             content=content,
             next_mentions=next_mentions,
