@@ -18,9 +18,7 @@ import json
 import logging
 import os
 import re
-import shutil
 import subprocess
-import tempfile
 import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Callable
@@ -41,16 +39,6 @@ def _subprocess_env(extra_env: dict[str, str] | None) -> dict[str, str]:
         env.update(extra_env)
     return env
 
-
-def _build_shell_cmd(command: str, prompt: str, extra_args: list[str]) -> str:
-    """构建供 shell=True 使用的命令字符串。
-    Windows 下用列表形式 subprocess 会找不到 agent（不走 shell PATH），故统一走 shell。
-    """
-    safe_prompt = prompt.replace('"', '\\"')
-    base = f'"{command}"' if " " in command else command
-    parts = [base, "-p", f'"{safe_prompt}"', "--output-format", "json"]
-    parts.extend(extra_args)
-    return " ".join(parts)
 
 
 class CursorCliAdapter(BaseAdapter):
@@ -99,56 +87,24 @@ class CursorCliAdapter(BaseAdapter):
 
         run_env = _subprocess_env(self.env)
         start_time = time.monotonic()
-
-        # Windows 上 agent 安装为 .CMD 文件，即使 subprocess 用列表模式，
-        # Python 也会通过 cmd.exe 执行 .cmd，而 cmd.exe 会在换行处截断参数。
-        # 因此 Windows 始终用临时文件方案；非 Windows 优先列表模式。
-        resolved: str | None = None
-        if os.name != "nt":
-            resolved = shutil.which(self.command, path=run_env.get("PATH"))
-
-        # 写临时文件（Windows 始终需要；非 Windows 仅在找不到命令时使用）
-        prompt_path: str | None = None
-        if not resolved:
-            tmp = tempfile.NamedTemporaryFile(
-                mode="w", suffix=".txt", delete=False, encoding="utf-8",
-            )
-            tmp.write(prompt)
-            tmp.close()
-            prompt_path = tmp.name
+        prompt_bytes = prompt.encode("utf-8")
 
         def _run_cmd() -> subprocess.CompletedProcess:
-            if resolved:
-                # 非 Windows 列表模式：prompt 作为独立参数，换行/引号等无截断风险
-                cmd_list = [resolved, "-p", prompt, "--output-format", "json"] + self.extra_args
-                logger.info("[CALL] cursor_cli: list-mode, resolved=%s", resolved)
-                return subprocess.run(
-                    cmd_list,
-                    cwd=workspace_dir,
-                    env=run_env,
-                    capture_output=True,
-                    timeout=self.timeout,
-                )
-            # 临时文件模式：从文件读取 prompt 避免截断
-            base = f'"{self.command}"' if " " in self.command else self.command
-            extra = " ".join(self.extra_args)
-            if os.name == "nt":
-                # Windows PowerShell: 用 Get-Content 读文件内容作为参数
-                shell_cmd = (
-                    f'powershell -NoProfile -Command "'
-                    f"$p = Get-Content -Raw -Encoding UTF8 '{prompt_path}'; "
-                    f'& {base} -p $p --output-format json {extra}"'
-                )
-            else:
-                shell_cmd = f'{base} -p "$(cat \'{prompt_path}\')" --output-format json {extra}'.strip()
-            logger.info("[CALL] cursor_cli: fallback shell cmd: %s", shell_cmd[:200])
+            # 通过 stdin 管道传递 prompt，避免 shell 转义和命令行长度限制
+            cmd = [
+                self.command,
+                "--output-format", "json",
+                *self.extra_args,
+            ]
+            logger.info("[CALL] cursor_cli cmd: %s (stdin prompt_len=%d)", cmd, len(prompt_bytes))
             return subprocess.run(
-                shell_cmd,
+                cmd,
+                input=prompt_bytes,
                 cwd=workspace_dir,
                 env=run_env,
                 capture_output=True,
                 timeout=self.timeout,
-                shell=True,
+                shell=(os.name == "nt"),  # Windows 上 .cmd 文件需要 shell
             )
 
         try:
@@ -180,12 +136,6 @@ class CursorCliAdapter(BaseAdapter):
                 exc_info=True,
             )
             raise
-        finally:
-            if prompt_path:
-                try:
-                    os.unlink(prompt_path)
-                except OSError:
-                    pass
 
         raw_output = (process.stdout or b"").decode("utf-8", errors="replace").strip()
         stderr_bytes = process.stderr or b""
@@ -231,12 +181,12 @@ class CursorCliAdapter(BaseAdapter):
 
         def _run_ok() -> subprocess.CompletedProcess:
             return subprocess.run(
-                _build_shell_cmd(self.command, "ok", []),
-                cwd=workspace_dir,
+                [self.command, "--output-format", "json"],
+                input=b"ok",
                 env=run_env,
                 capture_output=True,
                 timeout=15,
-                shell=True,
+                shell=(os.name == "nt"),
             )
 
         loop = asyncio.get_event_loop()

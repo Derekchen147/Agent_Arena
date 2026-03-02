@@ -14,7 +14,6 @@ import logging
 import os
 import re
 import subprocess
-import tempfile
 import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Callable
@@ -77,37 +76,25 @@ class GeminiCliAdapter(BaseAdapter):
 
         run_env = _subprocess_env(self.env)
         start_time = time.monotonic()
-
-        # 使用临时文件方案避免命令行截断（特别是 Windows）
-        prompt_path: str | None = None
-        tmp = tempfile.NamedTemporaryFile(
-            mode="w", suffix=".txt", delete=False, encoding="utf-8",
-        )
-        tmp.write(prompt)
-        tmp.close()
-        prompt_path = tmp.name
+        prompt_bytes = prompt.encode("utf-8")
 
         def _run_cmd() -> subprocess.CompletedProcess:
-            extra = " ".join(self.extra_args)
-            if os.name == "nt":
-                # Windows PowerShell: 用 Get-Content 读文件内容作为参数
-                shell_cmd = (
-                    f'powershell -NoProfile -Command "'
-                    f"$p = Get-Content -Raw -Encoding UTF8 '{prompt_path}'; "
-                    f'gemini -p `"$p`" --output-format json --approval-mode yolo {extra}"'
-                )
-            else:
-                # 非 Windows
-                shell_cmd = f'gemini -p "$(cat "{prompt_path}")" --output-format json --approval-mode yolo {extra}'.strip()
-            
-            logger.info("[CALL] gemini_cli shell cmd: %s", shell_cmd[:200])
+            # 通过 stdin 管道传递 prompt，避免 shell 转义和命令行长度限制
+            cmd = [
+                "gemini",
+                "--output-format", "json",
+                "--approval-mode", "yolo",
+                *self.extra_args,
+            ]
+            logger.info("[CALL] gemini_cli cmd: %s (stdin prompt_len=%d)", cmd, len(prompt_bytes))
             return subprocess.run(
-                shell_cmd,
+                cmd,
+                input=prompt_bytes,
                 cwd=workspace_dir,
                 env=run_env,
                 capture_output=True,
                 timeout=self.timeout,
-                shell=True,
+                shell=(os.name == "nt"),  # Windows 上 .cmd 文件需要 shell
             )
 
         try:
@@ -129,12 +116,6 @@ class GeminiCliAdapter(BaseAdapter):
                 exc_info=True,
             )
             raise
-        finally:
-            if prompt_path:
-                try:
-                    os.unlink(prompt_path)
-                except OSError:
-                    pass
 
         raw_output = (process.stdout or b"").decode("utf-8", errors="replace").strip()
         err = (process.stderr or b"").decode("utf-8", errors="replace").strip()

@@ -14,6 +14,10 @@ $env:HTTPS_PROXY="http://127.0.0.1:7897"
 $env:ALL_PROXY="socks5://127.0.0.1:7897"
 cd D:\projects\Agent_Arena
 
+uvicorn src.main:app --reload
+cd .\frontend\
+npm run dev
+
 # 设置代理powershell（用你的真实端口）
 set HTTP_PROXY=http://127.0.0.1:7897&set HTTPS_PROXY=http://127.0.0.1:7897&gemini -p "help me add a line hello from gemini at readme.md" --output-format "json" --approval-mode "yolo"
 

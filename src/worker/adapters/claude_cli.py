@@ -14,7 +14,6 @@ import logging
 import os
 import re
 import subprocess
-import tempfile
 import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Callable
@@ -73,40 +72,28 @@ class ClaudeCliAdapter(BaseAdapter):
         logger.info("[CALL] claude_cli assembled prompt =====> %s", prompt)
 
         run_env = _subprocess_env(self.env)
-        extra = " ".join(self.extra_args)
         start_time = time.monotonic()
-
-        # 使用临时文件避免 Windows 命令行参数截断（特别是多行 prompt）
-        prompt_path: str | None = None
-        tmp = tempfile.NamedTemporaryFile(
-            mode="w", suffix=".txt", delete=False, encoding="utf-8"
-        )
-        tmp.write(prompt)
-        tmp.close()
-        prompt_path = tmp.name
+        prompt_bytes = prompt.encode("utf-8")
 
         def _run_cmd() -> subprocess.CompletedProcess:
-            if os.name == "nt":
-                # Windows PowerShell：用 Get-Content 读文件内容作为参数
-                shell_cmd = (
-                    f'powershell -NoProfile -Command "'
-                    f"$p = Get-Content -Raw -Encoding UTF8 '{prompt_path}'; "
-                    f'claude -p `"$p`" --output-format json --permission-mode bypassPermissions {extra}"'
-                ).strip()
-            else:
-                shell_cmd = (
-                    f'claude -p "$(cat "{prompt_path}")"'
-                    f" --output-format json --permission-mode bypassPermissions {extra}"
-                ).strip()
-
-            logger.info("[CALL] claude_cli shell_cmd: %s", shell_cmd[:200])
+            # 通过 stdin 管道传递 prompt，避免 shell 转义和命令行长度限制
+            # --print 启用非交互模式，stdin 内容作为 prompt
+            cmd = [
+                "claude",
+                "-p",
+                "--output-format", "json",
+                "--permission-mode", "bypassPermissions",
+                *self.extra_args,
+            ]
+            logger.info("[CALL] claude_cli cmd: %s (stdin prompt_len=%d)", cmd, len(prompt_bytes))
             return subprocess.run(
-                shell_cmd,
+                cmd,
+                input=prompt_bytes,
                 cwd=workspace_dir,
                 env=run_env,
                 capture_output=True,
                 timeout=self.timeout,
-                shell=True,
+                shell=(os.name == "nt"),  # Windows 上 .cmd 文件需要 shell
             )
 
         try:
@@ -128,12 +115,6 @@ class ClaudeCliAdapter(BaseAdapter):
                 exc_info=True,
             )
             raise
-        finally:
-            if prompt_path:
-                try:
-                    os.unlink(prompt_path)
-                except OSError:
-                    pass
 
         raw_output = (process.stdout or b"").decode("utf-8", errors="replace").strip()
         err = (process.stderr or b"").decode("utf-8", errors="replace").strip()
