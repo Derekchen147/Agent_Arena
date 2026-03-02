@@ -241,13 +241,17 @@ class GeminiCliAdapter(BaseAdapter):
                     models_stats = stats.get("models", {})
                     total_input = 0
                     total_output = 0
+                    model_names = []
                     for m_name, m_data in models_stats.items():
+                        model_names.append(m_name)
                         t = m_data.get("tokens", {})
                         total_input += t.get("input", t.get("prompt", 0))
                         total_output += t.get("candidates", t.get("output", 0))
                     
                     meta.input_tokens = total_input
                     meta.output_tokens = total_output
+                    if model_names:
+                        meta.model_name = ", ".join(model_names)
                     
                     # 提取工具调用摘要
                     tools_stats = stats.get("tools", {})
@@ -332,4 +336,5 @@ class GeminiCliAdapter(BaseAdapter):
             should_respond=should_respond,
             execution_meta=meta,
             prompt_sent=prompt,
+            raw_output=raw_output,
         )

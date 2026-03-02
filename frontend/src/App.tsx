@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Group, StoredMessage, AgentProfile, WSEvent, UserInfoResponse } from './types';
 import { listGroups, getGroup, listAgents, sendMessage } from './api/client';
 import { getAuthStatus, getUserInfo, logout } from './api/authClient';
@@ -25,12 +25,29 @@ export default function App() {
   const [agents, setAgents] = useState<AgentProfile[]>([]);
   const [messages, setMessages] = useState<StoredMessage[]>([]);
   const [rightPanel, setRightPanel] = useState<'members' | 'logs'>('members');
+  const [historyLogMap, setHistoryLogMap] = useState<Record<string, any>>({});
 
   // Check auth status on mount
   useEffect(() => {
     checkAuthStatus();
   }, []);
 
+  const loadLogs = useCallback(async (groupId: string) => {
+    try {
+      const res = await fetch(`/api/messages/logs/${groupId}`);
+      const data = await res.json();
+      const logs = data.logs || [];
+      const map: Record<string, any> = {};
+      logs.forEach((log: any) => {
+        map[log.turn_id] = log;
+      });
+      setHistoryLogMap(map);
+    } catch (err) {
+      console.error('Failed to load logs:', err);
+    }
+  }, []);
+
+  // Check auth status on mount
   const checkAuthStatus = async () => {
     if (SKIP_AUTH) {
       setIsLoggedIn(true);
@@ -97,12 +114,15 @@ export default function App() {
     if (!selectedGroupId) {
       setSelectedGroup(null);
       setMessages([]);
+      setHistoryLogMap({});
       return;
     }
     getGroup(selectedGroupId)
       .then((g) => setSelectedGroup(g))
       .catch(console.error);
-  }, [selectedGroupId]);
+
+    loadLogs(selectedGroupId);
+  }, [selectedGroupId, loadLogs]);
 
   // WebSocket callbacks
   const onUserMessage = useCallback(
@@ -162,6 +182,10 @@ export default function App() {
     onAgentMessage,
     onSystemMessage,
   });
+
+  const combinedLogMap = useMemo(() => {
+    return { ...historyLogMap, ...turnLogMap };
+  }, [historyLogMap, turnLogMap]);
 
   const handleSendMessage = async (content: string, mentions: string[]) => {
     if (!selectedGroupId) return;
@@ -231,6 +255,7 @@ export default function App() {
           setMessages={setMessages}
           onSendMessage={handleSendMessage}
           connected={connected}
+          turnLogMap={combinedLogMap}
         />
         <div className="right-panel-wrapper">
           <div className="right-panel-tabs">
@@ -260,7 +285,7 @@ export default function App() {
             <LogPanel
               groupId={selectedGroupId}
               agents={agents}
-              turnLogMap={turnLogMap}
+              turnLogMap={combinedLogMap}
             />
           )}
         </div>

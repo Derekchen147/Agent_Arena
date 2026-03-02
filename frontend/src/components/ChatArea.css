@@ -196,6 +196,27 @@
 .message.agent .message-bubble {
   background: #ffffff;
   border-radius: 2px 12px 12px 12px;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.message-log-info {
+  display: flex;
+  align-items: center;
+  margin-top: 4px;
+  padding: 0 4px;
+  font-size: 11px;
+  color: #8e8e93;
+}
+
+.message-log-info span {
+  cursor: help;
+}
+
+.message-log-info .separator {
+  margin: 0 6px;
+  color: #c6c6c8;
+  user-select: none;
 }
 
 /* Human bubble: green (WeChat style), right-aligned with right tail */

@@ -80,7 +80,7 @@ export type WSEvent =
   | { type: 'agent_message'; agent_id: string; content: string; turn_id: string }
   | { type: 'agent_status'; agent_id: string; status: AgentStatus; detail: string }
   | { type: 'system_message'; content: string }
-  | { type: 'turn_log'; turn_id: string; agent_id: string; duration_ms: number; cost_usd: number; num_turns: number; input_tokens: number; output_tokens: number; tool_count: number; is_error: boolean };
+  | { type: 'turn_log'; turn_id: string; agent_id: string; model_name?: string; duration_ms: number; cost_usd: number; num_turns: number; input_tokens: number; output_tokens: number; tool_count: number; is_error: boolean };
 
 export type AgentStatus =
   | 'idle'
@@ -157,6 +157,7 @@ export interface CallLog {
   turn_id: string;
   agent_id: string;
   agent_name: string;
+  model_name?: string;
   invocation: string;
   prompt_preview: string;
   raw_output_preview: string;
@@ -174,6 +175,7 @@ export interface CallLog {
 export interface TurnLogMeta {
   turn_id: string;
   agent_id: string;
+  model_name?: string;
   duration_ms: number;
   cost_usd: number;
   num_turns: number;

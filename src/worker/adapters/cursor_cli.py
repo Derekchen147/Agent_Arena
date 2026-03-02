@@ -310,4 +310,5 @@ class CursorCliAdapter(BaseAdapter):
             should_respond=should_respond,
             execution_meta=meta,
             prompt_sent=prompt,
+            raw_output=raw_output,
         )

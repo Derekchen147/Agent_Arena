@@ -11,18 +11,20 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 logger = logging.getLogger(__name__)
 
 
 class CallLog(BaseModel):
     """单次 Agent 调用的完整记录。"""
+    model_config = ConfigDict(protected_namespaces=())
     log_id: str = ""
     session_id: str = ""
     turn_id: str = ""
     agent_id: str = ""
     agent_name: str = ""
+    model_name: str | None = None
     invocation: str = "must_reply"
     prompt_preview: str = ""     # 完整 prompt，不截断
     raw_output_preview: str = "" # 完整原始 CLI 输出（若 adapter 提供）

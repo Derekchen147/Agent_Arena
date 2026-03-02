@@ -101,6 +101,7 @@ export default function LogPanel({ groupId, agents, turnLogMap }: Props) {
                 <div className="log-entry-title">
                   <span className="log-agent-avatar">{getAgentAvatar(log.agent_id)}</span>
                   <span className="log-agent-name">{log.agent_name}</span>
+                  {log.model_name && <span className="log-model-name">{log.model_name}</span>}
                   <span className="log-time">{formatTime(log.timestamp)}</span>
                   {log.is_error && <span className="log-badge error">错误</span>}
                 </div>
@@ -157,10 +158,29 @@ export default function LogPanel({ groupId, agents, turnLogMap }: Props) {
                     </div>
                   )}
 
-                  {/* Response Preview */}
+                  {/* Raw Output */}
+                  {log.raw_output_preview && (
+                    <div className="log-section">
+                      <div className="log-section-title">
+                        📥 原始 CLI 输出
+                        <button 
+                          className="log-copy-btn" 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigator.clipboard.writeText(log.raw_output_preview);
+                          }}
+                        >
+                          复制
+                        </button>
+                      </div>
+                      <pre className="log-code-block">{log.raw_output_preview}</pre>
+                    </div>
+                  )}
+
+                  {/* Parse Response Preview (Optional, keep it if you want to see the extracted content) */}
                   {log.content_preview && (
                     <div className="log-section">
-                      <div className="log-section-title">📥 模型回复原文</div>
+                      <div className="log-section-title">📄 解析后的回复内容</div>
                       <pre className="log-code-block">{log.content_preview}</pre>
                     </div>
                   )}

@@ -8,7 +8,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class Message(BaseModel):
@@ -50,6 +50,8 @@ class ToolCall(BaseModel):
 
 class ExecutionMeta(BaseModel):
     """Agent 单次 CLI 调用的执行元数据（来自 stream-json 输出）。"""
+    model_config = ConfigDict(protected_namespaces=())
+    model_name: str | None = None
     duration_ms: int = 0
     cost_usd: float = 0.0
     num_turns: int = 0
@@ -92,9 +94,11 @@ class AgentOutput(BaseModel):
     """Agent 单次调用的返回：正文、下一轮 @ 名单、状态事件、附件及是否参与回复。"""
 
     content: str = ""
-    next_mentions: list[str] = Field(default_factory=list)   # 链式召唤的 agent_id
+    next_mentions: list[str] = Field(default_factory=list)   # 链式召唤 Graves_id
     status_updates: list[StatusEvent] = Field(default_factory=list)
     attachments: list[Attachment] = Field(default_factory=list)
     should_respond: bool = True   # may_reply 时由 Agent 自行决定是否回复
     execution_meta: ExecutionMeta | None = None
     prompt_sent: str = ""   # 完整 prompt，供 Orchestrator 写日志用，不广播给前端
+    raw_output: str = ""    # 完整原始 CLI 输出，供 Orchestrator 写日志用
+

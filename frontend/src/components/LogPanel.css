@@ -79,6 +79,7 @@
 
 .log-agent-avatar { font-size: 16px; }
 .log-agent-name { font-weight: 600; font-size: 13px; color: #111827; }
+.log-model-name { font-size: 11px; color: #6b7280; background: #f3f4f6; padding: 1px 6px; border-radius: 4px; }
 .log-time { margin-left: auto; font-size: 11px; color: #9ca3af; }
 
 .log-entry-meta {
@@ -122,12 +123,35 @@
 }
 
 .log-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   font-size: 11px;
   font-weight: 600;
   color: #6b7280;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 6px;
+}
+
+.log-copy-btn {
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 10px;
+  color: #4b5563;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-transform: none;
+  letter-spacing: normal;
+}
+.log-copy-btn:hover {
+  background: #e5e7eb;
+  color: #111827;
+}
+.log-copy-btn:active {
+  transform: translateY(1px);
 }
 
 .log-code-block {

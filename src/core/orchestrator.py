@@ -391,8 +391,9 @@ class Orchestrator:
                 turn_id=turn_id,
                 agent_id=agent_id,
                 agent_name=profile.name if profile else agent_id,
+                model_name=meta.model_name,
                 prompt_preview=output.prompt_sent or "",
-                raw_output_preview="",  # raw_output not available here, recorded via adapter
+                raw_output_preview=output.raw_output or "",
                 content_preview=output.content or "",
                 duration_ms=meta.duration_ms,
                 cost_usd=meta.cost_usd,
@@ -412,6 +413,7 @@ class Orchestrator:
                 "type": "turn_log",
                 "turn_id": turn_id,
                 "agent_id": agent_id,
+                "model_name": meta.model_name,
                 "duration_ms": meta.duration_ms,
                 "cost_usd": meta.cost_usd,
                 "num_turns": meta.num_turns,

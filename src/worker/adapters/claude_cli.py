@@ -263,6 +263,8 @@ class ClaudeCliAdapter(BaseAdapter):
                 usage = msg.get("usage", {})
                 total_input_tokens += usage.get("input_tokens", 0)
                 total_output_tokens += usage.get("output_tokens", 0)
+                if not meta.model_name:
+                    meta.model_name = msg.get("model", "")
                 for block in msg.get("content", []):
                     if block.get("type") == "tool_use":
                         tc = ToolCall(
@@ -296,6 +298,26 @@ class ClaudeCliAdapter(BaseAdapter):
                 meta.num_turns = event.get("num_turns", 0)
                 meta.is_error = event.get("is_error", False)
                 meta.cli_session_id = event.get("session_id", "")
+                
+                # 提取统计信息
+                usage = event.get("usage", {})
+                if usage:
+                    # 对于 Claude，输入 token 应包含缓存创建和缓存读取
+                    total_input_tokens += (
+                        usage.get("input_tokens", 0) + 
+                        usage.get("cache_creation_input_tokens", 0) + 
+                        usage.get("cache_read_input_tokens", 0)
+                    )
+                    total_output_tokens += usage.get("output_tokens", 0)
+                
+                # 提取模型名称
+                model_usage = event.get("modelUsage", {})
+                if model_usage and isinstance(model_usage, dict):
+                    # 取第一个 key 作为模型名
+                    model_names = list(model_usage.keys())
+                    if model_names:
+                        meta.model_name = model_names[0]
+
                 if not meta.is_error:
                     final_result_text = event.get("result", "")
 
@@ -313,6 +335,16 @@ class ClaudeCliAdapter(BaseAdapter):
                     meta.duration_ms = data.get("duration_ms", meta.duration_ms)
                     meta.cost_usd = data.get("total_cost_usd", meta.cost_usd)
                     meta.num_turns = data.get("num_turns", meta.num_turns)
+                    
+                    # 修复：从单个 JSON 中提取 token 统计信息
+                    if "usage" in data:
+                        usage = data["usage"]
+                        meta.input_tokens = usage.get("input_tokens", meta.input_tokens)
+                        meta.output_tokens = usage.get("output_tokens", meta.output_tokens)
+                    
+                    if "model" in data and not meta.model_name:
+                        meta.model_name = data["model"]
+
                 elif isinstance(data, list):
                     content = "\n".join(
                         b.get("text", "") for b in data
@@ -343,4 +375,5 @@ class ClaudeCliAdapter(BaseAdapter):
             should_respond=should_respond,
             execution_meta=meta,
             prompt_sent=prompt,
+            raw_output=raw_output,
         )

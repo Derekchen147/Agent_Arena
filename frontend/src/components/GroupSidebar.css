@@ -14,86 +14,43 @@
   justify-content: space-between;
   padding: 16px;
   border-bottom: 1px solid #e5e5e7;
-  min-height: 60px;
+  min-height: 64px;
   background: #ffffff;
 }
 
 .sidebar-header h2 {
   margin: 0;
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 600;
   color: #1d1d1f;
 }
 
 .btn-icon {
-  width: 36px;
-  height: 36px;
-  min-width: 36px;
-  min-height: 36px;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
   border: none;
   border-radius: 50%;
-  background: #0071e3;
-  color: #ffffff;
-  font-size: 28px;
-  font-weight: bold;
+  background: #f5f5f7;
+  color: #86868b;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.2s;
-  line-height: 1;
+  transition: all 0.2s;
   padding: 0;
   flex-shrink: 0;
-  margin: 0;
-  box-shadow: 0 2px 8px rgba(0, 113, 227, 0.3);
 }
 
 .btn-icon:hover {
-  background: #0077ed;
+  background: #0071e3;
+  color: #ffffff;
 }
 
-.sidebar-header {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  padding: 16px !important;
-  border-bottom: 1px solid #e5e5e7 !important;
-  min-height: 60px !important;
-  background: #ffffff !important;
-}
-
-.sidebar-header h2 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 700;
-  color: #1d1d1f;
-}
-
-.btn-icon {
-  width: 36px !important;
-  height: 36px !important;
-  min-width: 36px !important;
-  min-height: 36px !important;
-  border: none !important;
-  border-radius: 50% !important;
-  background: #0071e3 !important;
-  color: #ffffff !important;
-  font-size: 28px !important;
-  font-weight: bold !important;
-  cursor: pointer !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  transition: background 0.2s !important;
-  line-height: 1 !important;
-  padding: 0 !important;
-  flex-shrink: 0 !important;
-  margin: 0 !important;
-  box-shadow: 0 2px 8px rgba(0, 113, 227, 0.3) !important;
-}
-
-.btn-icon:hover {
-  background: #0077ed;
+.btn-icon svg {
+  width: 14px;
+  height: 14px;
 }
 
 .group-list {

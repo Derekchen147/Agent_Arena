@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import type { StoredMessage, AgentProfile, Group } from '../types';
+import type { StoredMessage, AgentProfile, Group, TurnLogMeta } from '../types';
 import { getMessages } from '../api/client';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -15,6 +15,7 @@ interface Props {
   setMessages: React.Dispatch<React.SetStateAction<StoredMessage[]>>;
   onSendMessage: (content: string, mentions: string[]) => void;
   connected: boolean;
+  turnLogMap: Record<string, TurnLogMeta>;
 }
 
 export default function ChatArea({
@@ -24,6 +25,7 @@ export default function ChatArea({
   setMessages,
   onSendMessage,
   connected,
+  turnLogMap,
 }: Props) {
   const [input, setInput] = useState('');
   const [showMentions, setShowMentions] = useState(false);
@@ -257,6 +259,23 @@ export default function ChatArea({
                   <div className={`message-bubble ${msg.author_type !== 'human' ? 'markdown-body' : ''}`}>
                     {renderContent(msg.content, msg.author_type)}
                   </div>
+                  {msg.author_type === 'agent' && turnLogMap[msg.turn_id] && (
+                    <div className="message-log-info">
+                      {turnLogMap[msg.turn_id].model_name && (
+                        <span title="模型名称">{turnLogMap[msg.turn_id].model_name}</span>
+                      )}
+                      {turnLogMap[msg.turn_id].model_name && <span className="separator">·</span>}
+                      <span title="耗时">{(turnLogMap[msg.turn_id].duration_ms / 1000).toFixed(1)}s</span>
+                      <span className="separator">·</span>
+                      <span title="输入 Token">↑ {turnLogMap[msg.turn_id].input_tokens.toLocaleString()}</span>
+                      <span className="separator">·</span>
+                      <span title="输出 Token">↓ {turnLogMap[msg.turn_id].output_tokens.toLocaleString()}</span>
+                      {turnLogMap[msg.turn_id].cost_usd > 0 && <span className="separator">·</span>}
+                      {turnLogMap[msg.turn_id].cost_usd > 0 && (
+                        <span title="估算费用">${turnLogMap[msg.turn_id].cost_usd.toFixed(4)}</span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </>
             )}
