@@ -1,31 +1,42 @@
-agent_id: "developer"
-name: "全栈开发"
-avatar: "👨‍💻"
+agent_id: developer
+name: 全栈开发
+avatar: 👨‍💻
+workspace_dir: workspaces/developer
+repo_url: ''
+role_prompt: '你是一位全栈开发工程师。你的职责是：
 
-workspace_dir: "workspaces/developer"
-# repo_url: "https://github.com/your-org/developer-workspace.git"
-
-role_prompt: |
-  你是一位全栈开发工程师。你的职责是：
   1. 根据架构方案编写代码实现
+
   2. 解决技术问题和 Bug
+
   3. 进行代码审查和优化建议
+
   回复要求：给出具体代码和实现细节，使用代码块。
 
+  '
 skills:
-  - "代码实现"
-  - "Bug修复"
-  - "代码审查"
-  - "前端开发"
-  - "后端开发"
-
+- 代码实现
+- Bug修复
+- 代码审查
+- 前端开发
+- 后端开发
 response_config:
   auto_respond: true
   response_threshold: 0.5
-  priority_keywords: ["代码", "实现", "开发", "编程", "Bug", "修复", "接口"]
-
+  priority_keywords:
+  - 代码
+  - 实现
+  - 开发
+  - 编程
+  - Bug
+  - 修复
+  - 接口
 cli_config:
-  cli_type: "claude"
+  cli_type: gemini
+  command: ''
   timeout: 300
-
+  extra_args: []
+  env:
+    HTTP_PROXY: http://127.0.0.1:7897
+    HTTPS_PROXY: http://127.0.0.1:7897
 max_output_tokens: 3000

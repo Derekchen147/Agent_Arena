@@ -13,6 +13,7 @@ from src.models.protocol import AgentInput, AgentOutput
 from src.worker.adapters.base import BaseAdapter
 from src.worker.adapters.claude_cli import ClaudeCliAdapter
 from src.worker.adapters.cursor_cli import CursorCliAdapter
+from src.worker.adapters.gemini_cli import GeminiCliAdapter
 from src.worker.adapters.generic_cli import GenericCliAdapter
 
 if TYPE_CHECKING:
@@ -45,6 +46,12 @@ class WorkerRuntime:
         elif cli_type == "cursor":
             return CursorCliAdapter(
                 command=cli_config.get("command") or "agent",
+                timeout=cli_config.get("timeout", 300),
+                extra_args=cli_config.get("extra_args", []),
+                env=cli_config.get("env"),
+            )
+        elif cli_type == "gemini":
+            return GeminiCliAdapter(
                 timeout=cli_config.get("timeout", 300),
                 extra_args=cli_config.get("extra_args", []),
                 env=cli_config.get("env"),

@@ -121,7 +121,8 @@ export default function AgentManagement({ agents, onAgentsChanged, onBack }: Pro
       } catch {
         setWorkspaceContent('');
         setOriginalWorkspaceContent('');
-        setWorkspaceFilename(agent.cli_config.cli_type === 'cursor' ? '.cursor/rules/role.mdc' : 'CLAUDE.md');
+        const t = agent.cli_config.cli_type;
+        setWorkspaceFilename(t === 'cursor' ? '.cursor/rules/role.mdc' : t === 'gemini' ? 'GEMINI.md' : 'CLAUDE.md');
       }
     },
     [agents],
@@ -152,7 +153,13 @@ export default function AgentManagement({ agents, onAgentsChanged, onBack }: Pro
   const updateField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
     if (key === 'cli_type') {
-      setWorkspaceFilename(value === 'cursor' ? '.cursor/rules/role.mdc' : 'CLAUDE.md');
+      if (value === 'cursor') {
+        setWorkspaceFilename('.cursor/rules/role.mdc');
+      } else if (value === 'gemini') {
+        setWorkspaceFilename('GEMINI.md');
+      } else {
+        setWorkspaceFilename('CLAUDE.md');
+      }
     }
   };
 
@@ -427,6 +434,7 @@ export default function AgentManagement({ agents, onAgentsChanged, onBack }: Pro
                   onChange={(e) => updateField('cli_type', e.target.value)}
                 >
                   <option value="claude">Claude CLI</option>
+                  <option value="gemini">Gemini CLI</option>
                   <option value="cursor">Cursor CLI</option>
                   <option value="generic">Generic CLI</option>
                 </select>
@@ -477,6 +485,12 @@ export default function AgentManagement({ agents, onAgentsChanged, onBack }: Pro
                 placeholder={'HTTP_PROXY=http://127.0.0.1:7897\nHTTPS_PROXY=http://127.0.0.1:7897'}
                 rows={3}
               />
+              {form.cli_type === 'gemini' && (
+                <div className="am-form-hint">
+                  Gemini CLI 需要访问 Google 服务，如需代理请在此配置：
+                  HTTP_PROXY / HTTPS_PROXY / ALL_PROXY
+                </div>
+              )}
             </div>
           </div>
 
@@ -489,6 +503,8 @@ export default function AgentManagement({ agents, onAgentsChanged, onBack }: Pro
                 <div className="am-form-hint">
                   {form.cli_type === 'cursor'
                     ? 'Cursor 会自动加载 .cursor/rules/*.mdc 作为 system prompt'
+                    : form.cli_type === 'gemini'
+                    ? 'Gemini CLI 会读取工作目录中的 GEMINI.md 作为上下文'
                     : 'Claude CLI 会读取工作目录中的 CLAUDE.md 作为上下文'}
                 </div>
               </div>

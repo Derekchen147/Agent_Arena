@@ -15,9 +15,7 @@ $env:ALL_PROXY="socks5://127.0.0.1:7897"
 cd D:\projects\Agent_Arena
 
 # 设置代理powershell（用你的真实端口）
-set HTTP_PROXY=http://127.0.0.1:7897
-set HTTPS_PROXY=http://127.0.0.1:7897
-gemini -p "hello" --output-format "json"
+set HTTP_PROXY=http://127.0.0.1:7897&set HTTPS_PROXY=http://127.0.0.1:7897&gemini -p "help me add a line hello from gemini at readme.md" --output-format "json" --approval-mode "yolo"
 
 # 更严谨的验证（分步排查问题）
 Write-Host "🔍 正在检测端口 $httpPort 是否被 Clash 占用..."

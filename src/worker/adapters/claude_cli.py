@@ -14,10 +14,12 @@ import logging
 import os
 import re
 import subprocess
+import tempfile
+import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Callable
 
-from src.models.protocol import AgentInput, AgentOutput
+from src.models.protocol import AgentInput, AgentOutput, ExecutionMeta
 from src.worker.adapters.base import BaseAdapter
 
 logger = logging.getLogger(__name__)
@@ -70,49 +72,47 @@ class ClaudeCliAdapter(BaseAdapter):
         )
         logger.info("[CALL] claude_cli assembled prompt =====> %s", prompt)
 
-        cmd = ["claude", "-p", prompt, "--output-format", "stream-json"]
-        cmd.extend(self.extra_args)
-
         run_env = _subprocess_env(self.env)
+        extra = " ".join(self.extra_args)
+        start_time = time.monotonic()
+
+        # 使用临时文件避免 Windows 命令行参数截断（特别是多行 prompt）
+        prompt_path: str | None = None
+        tmp = tempfile.NamedTemporaryFile(
+            mode="w", suffix=".txt", delete=False, encoding="utf-8"
+        )
+        tmp.write(prompt)
+        tmp.close()
+        prompt_path = tmp.name
 
         def _run_cmd() -> subprocess.CompletedProcess:
+            if os.name == "nt":
+                # Windows PowerShell：用 Get-Content 读文件内容作为参数
+                shell_cmd = (
+                    f'powershell -NoProfile -Command "'
+                    f"$p = Get-Content -Raw -Encoding UTF8 '{prompt_path}'; "
+                    f'claude -p `"$p`" --output-format json --permission-mode bypassPermissions {extra}"'
+                ).strip()
+            else:
+                shell_cmd = (
+                    f'claude -p "$(cat "{prompt_path}")"'
+                    f" --output-format json --permission-mode bypassPermissions {extra}"
+                ).strip()
+
+            logger.info("[CALL] claude_cli shell_cmd: %s", shell_cmd[:200])
             return subprocess.run(
-                cmd,
+                shell_cmd,
                 cwd=workspace_dir,
                 env=run_env,
                 capture_output=True,
                 timeout=self.timeout,
+                shell=True,
             )
 
         try:
             loop = asyncio.get_event_loop()
             process = await loop.run_in_executor(_executor, _run_cmd)
-            raw_output = (process.stdout or b"").decode("utf-8", errors="replace").strip()
-            err = (process.stderr or b"").decode("utf-8", errors="replace").strip()
-
-            if process.returncode != 0:
-                logger.error(
-                    "[CALL] Claude CLI non-zero exit: agent_id=%s returncode=%s stderr=%s stdout_preview=%s",
-                    input.agent_id,
-                    process.returncode,
-                    err,
-                    raw_output[:300] if raw_output else "",
-                )
-                return AgentOutput(
-                    content=f"[CLI Error] {err or raw_output}",
-                    should_respond=True,
-                )
-
-            logger.info(
-                "[CALL] claude_cli: agent_id=%s exit 0 output_len=%d",
-                input.agent_id,
-                len(raw_output),
-            )
-            logger.info("[CALL] claude_cli raw_output =====> %s", raw_output[:3000])
-            result = self._parse_output(raw_output, input, prompt)
-            logger.info("[CALL] claude_cli parsed content =====> %s", result.content[:1000])
-            return result
-
+            duration_ms = int((time.monotonic() - start_time) * 1000)
         except subprocess.TimeoutExpired:
             logger.error(
                 "[CALL] Claude CLI timeout: agent_id=%s timeout=%ss",
@@ -120,13 +120,6 @@ class ClaudeCliAdapter(BaseAdapter):
                 self.timeout,
             )
             return AgentOutput(content="[Timeout] CLI 响应超时", should_respond=True)
-        except FileNotFoundError:
-            logger.error(
-                "[CALL] Claude CLI not found (not on PATH). agent_id=%s workspace_dir=%s",
-                input.agent_id,
-                workspace_dir,
-            )
-            return AgentOutput(content="[Error] claude 命令未找到，请确认已安装 Claude Code CLI", should_respond=True)
         except Exception as e:
             logger.error(
                 "[CALL] claude_cli.invoke exception: agent_id=%s error=%s",
@@ -135,6 +128,41 @@ class ClaudeCliAdapter(BaseAdapter):
                 exc_info=True,
             )
             raise
+        finally:
+            if prompt_path:
+                try:
+                    os.unlink(prompt_path)
+                except OSError:
+                    pass
+
+        raw_output = (process.stdout or b"").decode("utf-8", errors="replace").strip()
+        err = (process.stderr or b"").decode("utf-8", errors="replace").strip()
+
+        if process.returncode != 0:
+            logger.error(
+                "[CALL] Claude CLI non-zero exit: agent_id=%s returncode=%s stderr=%s stdout_preview=%s",
+                input.agent_id,
+                process.returncode,
+                err,
+                raw_output[:300] if raw_output else "",
+            )
+            return AgentOutput(
+                content=f"[CLI Error] {err or raw_output}",
+                should_respond=True,
+                execution_meta=ExecutionMeta(duration_ms=duration_ms, is_error=True),
+                prompt_sent=prompt,
+            )
+
+        logger.info(
+            "[CALL] claude_cli: agent_id=%s exit 0 output_len=%d duration_ms=%d",
+            input.agent_id,
+            len(raw_output),
+            duration_ms,
+        )
+        logger.info("[CALL] claude_cli raw_output =====> %s", raw_output[:3000])
+        result = self._parse_output(raw_output, input, prompt, duration_ms)
+        logger.info("[CALL] claude_cli parsed content =====> %s", result.content[:1000])
+        return result
 
     async def health_check(self, workspace_dir: str) -> bool:
         """执行 claude --version 判断 CLI 是否可用（线程池执行，兼容 Windows）。"""
@@ -142,10 +170,11 @@ class ClaudeCliAdapter(BaseAdapter):
 
         def _run_version() -> subprocess.CompletedProcess:
             return subprocess.run(
-                ["claude", "--version"],
+                "claude --version",
                 env=run_env,
                 capture_output=True,
                 timeout=10,
+                shell=True,
             )
 
         try:
@@ -222,21 +251,19 @@ class ClaudeCliAdapter(BaseAdapter):
 
         return "\n".join(parts)
 
-    def _parse_output(self, raw_output: str, input: AgentInput, prompt: str = "") -> AgentOutput:
-        """解析 --output-format stream-json 的 NDJSON 输出。
+    def _parse_output(self, raw_output: str, input: AgentInput, prompt: str = "", duration_ms: int = 0) -> AgentOutput:
+        """解析 Claude CLI 输出。
 
-        每行一个 JSON 事件：
-        - type=assistant: 助手消息（含 text 块和 tool_use 块）
-        - type=user: 工具调用结果
-        - type=result: 最终结果（含 duration_ms, total_cost_usd 等）
+        --output-format json   → 单个 JSON 对象（含 result, duration_ms 等）
+        --output-format stream-json → NDJSON，每行一个事件
         """
-        from src.models.protocol import ExecutionMeta, ToolCall
+        from src.models.protocol import ToolCall
 
         tool_calls: list[ToolCall] = []
         tool_use_map: dict[str, ToolCall] = {}  # tool_use_id -> ToolCall
         total_input_tokens = 0
         total_output_tokens = 0
-        meta = ExecutionMeta()
+        meta = ExecutionMeta(duration_ms=duration_ms)
         final_result_text: str | None = None
 
         for line in raw_output.strip().split('\n'):

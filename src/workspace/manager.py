@@ -76,6 +76,8 @@ class WorkspaceManager:
         if role_prompt:
             if cli_type == "cursor":
                 self._write_cursor_role_rule(workspace_path, role_prompt)
+            elif cli_type == "gemini":
+                self._write_gemini_md(workspace_path, role_prompt)
             else:
                 self._write_claude_md(workspace_path, role_prompt)
 
@@ -203,6 +205,11 @@ class WorkspaceManager:
                 if old_rule.exists():
                     old_rule.unlink()
                     logger.info(f"Removed old .cursor/rules/role.mdc for {profile.agent_id}")
+            elif old_profile.cli_config.cli_type == "gemini":
+                old_gemini = workspace_path / "GEMINI.md"
+                if old_gemini.exists():
+                    old_gemini.unlink()
+                    logger.info(f"Removed old GEMINI.md for {profile.agent_id}")
             else:
                 old_claude = workspace_path / "CLAUDE.md"
                 if old_claude.exists():
@@ -213,6 +220,8 @@ class WorkspaceManager:
         if (role_changed or cli_type_changed) and profile.role_prompt:
             if profile.cli_config.cli_type == "cursor":
                 self._force_write_cursor_role_rule(workspace_path, profile.role_prompt)
+            elif profile.cli_config.cli_type == "gemini":
+                self._force_write_gemini_md(workspace_path, profile.role_prompt)
             else:
                 self._force_write_claude_md(workspace_path, profile.role_prompt)
 
@@ -231,6 +240,9 @@ class WorkspaceManager:
         if profile.cli_config.cli_type == "cursor":
             filepath = workspace_path / ".cursor" / "rules" / "role.mdc"
             filename = ".cursor/rules/role.mdc"
+        elif profile.cli_config.cli_type == "gemini":
+            filepath = workspace_path / "GEMINI.md"
+            filename = "GEMINI.md"
         else:
             filepath = workspace_path / "CLAUDE.md"
             filename = "CLAUDE.md"
@@ -247,6 +259,8 @@ class WorkspaceManager:
             rules_dir = workspace_path / ".cursor" / "rules"
             rules_dir.mkdir(parents=True, exist_ok=True)
             (rules_dir / "role.mdc").write_text(content, encoding="utf-8")
+        elif profile.cli_config.cli_type == "gemini":
+            (workspace_path / "GEMINI.md").write_text(content, encoding="utf-8")
         else:
             (workspace_path / "CLAUDE.md").write_text(content, encoding="utf-8")
 
@@ -306,6 +320,20 @@ class WorkspaceManager:
         )
         (rules_dir / "role.mdc").write_text(content, encoding="utf-8")
         logger.info(f"Force wrote .cursor/rules/role.mdc to {workspace_path}")
+
+    def _write_gemini_md(self, workspace_path: Path, role_prompt: str) -> None:
+        """在工作目录下创建 GEMINI.md 写入 role_prompt；若已存在则跳过避免覆盖仓库自带配置。"""
+        gemini_md = workspace_path / "GEMINI.md"
+        if gemini_md.exists():
+            logger.info(f"GEMINI.md already exists in {workspace_path}, skipping write")
+            return
+        gemini_md.write_text(role_prompt, encoding="utf-8")
+        logger.info(f"Wrote GEMINI.md to {workspace_path}")
+
+    def _force_write_gemini_md(self, workspace_path: Path, role_prompt: str) -> None:
+        """强制写入 GEMINI.md（更新场景使用，覆盖已有文件）。"""
+        (workspace_path / "GEMINI.md").write_text(role_prompt, encoding="utf-8")
+        logger.info(f"Force wrote GEMINI.md to {workspace_path}")
 
     def _save_agent_yaml(self, profile: AgentProfile) -> None:
         """将 profile 序列化为 YAML 写入 agents_config_dir/{agent_id}.yaml。"""

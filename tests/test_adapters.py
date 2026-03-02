@@ -3,13 +3,14 @@
 import pytest
 from src.worker.adapters.base import BaseAdapter
 from src.worker.adapters.claude_cli import ClaudeCliAdapter
+from src.worker.adapters.gemini_cli import GeminiCliAdapter
 from src.worker.adapters.generic_cli import GenericCliAdapter
 from src.models.protocol import AgentInput, Message
 
 
 def test_adapter_registry():
     """验证 Adapter 子类实现了所有抽象方法。"""
-    for cls in [ClaudeCliAdapter, GenericCliAdapter]:
+    for cls in [ClaudeCliAdapter, GeminiCliAdapter, GenericCliAdapter]:
         assert issubclass(cls, BaseAdapter)
         instance = cls()
         assert hasattr(instance, "invoke")
@@ -57,3 +58,41 @@ def test_claude_cli_parse_output():
     output = adapter._parse_output(content, input)
     assert output.should_respond is True
     assert output.content == "这是一段正常回复"
+
+
+def test_gemini_cli_build_prompt():
+    """测试 Gemini CLI Adapter 的 prompt 构建。"""
+    adapter = GeminiCliAdapter()
+    input = AgentInput(
+        session_id="test",
+        turn_id="t1",
+        agent_id="architect",
+        messages=[
+            Message(role="user", author_name="用户", content="帮我设计一个系统"),
+        ],
+    )
+    prompt = adapter._build_prompt(input)
+    assert "用户" in prompt
+    assert "帮我设计一个系统" in prompt
+    assert "<!--NEXT_MENTIONS:" in prompt
+
+
+def test_gemini_cli_parse_output():
+    """测试 Gemini CLI Adapter 的输出解析。"""
+    adapter = GeminiCliAdapter()
+    input = AgentInput(session_id="test", turn_id="t1", agent_id="test")
+
+    # 测试 JSON 格式
+    content = '{"result": "这是结果", "duration_ms": 100}'
+    output = adapter._parse_output(content, input)
+    assert output.content == "这是结果"
+
+    # 测试 NDJSON 格式
+    content = '{"type": "result", "result": "这是 NDJSON 结果"}'
+    output = adapter._parse_output(content, input)
+    assert output.content == "这是 NDJSON 结果"
+
+    # 测试 NEXT_MENTIONS
+    content = '结果如下<!--NEXT_MENTIONS:["dev"]-->'
+    output = adapter._parse_output(content, input)
+    assert output.next_mentions == ["dev"]

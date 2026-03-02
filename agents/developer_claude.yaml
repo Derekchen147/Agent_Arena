@@ -1,0 +1,20 @@
+agent_id: developer_claude
+name: claude开发员工
+avatar: ''
+workspace_dir: workspaces\developer_claude
+repo_url: ''
+role_prompt: ''
+skills: []
+response_config:
+  auto_respond: true
+  response_threshold: 0.6
+  priority_keywords: []
+cli_config:
+  cli_type: claude
+  command: ''
+  timeout: 300
+  extra_args: []
+  env:
+    HTTP_PROXY: http://127.0.0.1:7897
+    HTTPS_PROXY: http://127.0.0.1:7897
+max_output_tokens: 2000
