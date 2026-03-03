@@ -5,6 +5,9 @@
 
 from __future__ import annotations
 
+from dataclasses import field as dc_field
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -59,6 +62,12 @@ class AgentProfile(BaseModel):
     # Token 控制（用于上下文截断策略）
     max_output_tokens: int = 2000
 
+    # MCP 配置（运行时从 mcp/mcp_config.yaml 加载，不序列化到 agent.yaml）
+    mcp_config: Any | None = None
+
+    # 技能定义列表（运行时从 skills/ 目录加载，不序列化到 agent.yaml）
+    skill_definitions: list[Any] = Field(default_factory=list)
+
     @classmethod
     def from_workspace(cls, workspace_path: str | Path) -> AgentProfile:
         """从工作目录加载 Agent 配置。
@@ -83,6 +92,14 @@ class AgentProfile(BaseModel):
         if soul_md.exists():
             role_prompt = soul_md.read_text(encoding="utf-8").strip()
 
+        # 加载 MCP 配置
+        from src.mcp.loader import load_mcp_config
+        mcp_config = load_mcp_config(path)
+
+        # 加载技能定义
+        from src.skills.loader import load_skills_from_workspace
+        skill_definitions = load_skills_from_workspace(path)
+
         # 合并数据
         return cls(
             agent_id=data.get("agent_id", path.name),
@@ -95,4 +112,6 @@ class AgentProfile(BaseModel):
             response_config=ResponseConfig(**data.get("response_config", {})),
             cli_config=CliConfig(**data.get("cli_config", {})),
             max_output_tokens=data.get("max_output_tokens", 2000),
+            mcp_config=mcp_config,
+            skill_definitions=skill_definitions,
         )

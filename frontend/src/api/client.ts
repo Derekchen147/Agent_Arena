@@ -8,6 +8,9 @@ import type {
   OnboardAgentRequest,
   UpdateAgentRequest,
   GroupMember,
+  SkillDefinition,
+  McpServerConfig,
+  McpReadiness,
 } from '../types';
 
 const BASE = '/api';
@@ -121,6 +124,17 @@ export async function deleteAgent(agentId: string): Promise<void> {
   await request(`/agents/${agentId}`, { method: 'DELETE' });
 }
 
+export async function getOpenClawFile(agentId: string, filename: string): Promise<{ content: string; filename: string }> {
+  return request(`/agents/${agentId}/openclaw/${filename}`);
+}
+
+export async function updateOpenClawFile(agentId: string, filename: string, content: string): Promise<void> {
+  await request(`/agents/${agentId}/openclaw/${filename}`, {
+    method: 'PUT',
+    body: JSON.stringify({ content }),
+  });
+}
+
 export async function getWorkspaceConfig(agentId: string): Promise<{ content: string; filename: string }> {
   return request(`/agents/${agentId}/workspace-config`);
 }
@@ -134,4 +148,63 @@ export async function updateWorkspaceConfig(agentId: string, content: string): P
 
 export async function reloadAgents(): Promise<{ ok: boolean; count: number }> {
   return request('/agents/reload', { method: 'POST' });
+}
+
+// ── Agent Skills & MCP ──
+
+export async function getAgentSkills(agentId: string): Promise<SkillDefinition[]> {
+  const data = await request<{ skills: SkillDefinition[] }>(`/agents/${agentId}/skills`);
+  return data.skills;
+}
+
+export async function getAgentMcp(agentId: string): Promise<{ servers: McpServerConfig[]; readiness: McpReadiness[] }> {
+  return request(`/agents/${agentId}/mcp`);
+}
+
+export async function updateAgentMcpEnv(
+  agentId: string,
+  serverId: string,
+  env: Record<string, string>,
+): Promise<void> {
+  await request(`/agents/${agentId}/mcp`, {
+    method: 'PUT',
+    body: JSON.stringify({ server_id: serverId, env }),
+  });
+}
+
+export async function createSkill(
+  agentId: string,
+  data: { skill_id: string; name: string; description: string; body?: string },
+): Promise<void> {
+  await request(`/agents/${agentId}/skills`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteSkill(agentId: string, skillId: string): Promise<void> {
+  await request(`/agents/${agentId}/skills/${skillId}`, { method: 'DELETE' });
+}
+
+export async function addMcpServer(
+  agentId: string,
+  data: {
+    server_id: string;
+    server_type?: string;
+    transport?: string;
+    command: string;
+    args?: string[];
+    env?: Record<string, string>;
+    required_env?: string[];
+    capability?: string;
+  },
+): Promise<void> {
+  await request(`/agents/${agentId}/mcp/servers`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteMcpServer(agentId: string, serverId: string): Promise<void> {
+  await request(`/agents/${agentId}/mcp/servers/${serverId}`, { method: 'DELETE' });
 }

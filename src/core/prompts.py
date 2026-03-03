@@ -77,6 +77,27 @@ Capture what matters. Decisions, context, things to remember. Skip the secrets u
 - When you learn a lesson → update AGENTS.md, TOOLS.md, or the relevant skill.
 - When you make a mistake → document it so future-you doesn't repeat it.
 - **Text > Brain** 📝
+
+## Skills System
+
+If you have a `skills/` directory in your workspace, it contains your learned skills.
+
+### Structure
+```
+skills/
+  code-review/SKILL.md
+  systematic-debugging/SKILL.md
+  ...
+```
+
+### How to Use Skills
+- Each `SKILL.md` has a YAML frontmatter with `name` and `description` (when to use it)
+- The markdown body contains the full instructions
+- **Proactively** invoke relevant skills — don't wait to be told
+- If a task even slightly matches a skill's description, read and follow the skill
+
+### Writing New Skills
+You can create new skills by adding a directory under `skills/` with a `SKILL.md` file.
 """
 
 OPENCLAW_LOADING_INSTRUCTION = """# OpenClaw Persona & Memory System
@@ -87,8 +108,12 @@ Before doing anything else:
 3. Read `USER.md` — this is who you're helping.
 4. Read `memory/YYYY-MM-DD.md` (today + yesterday) — for recent context.
 5. If this is a direct/private conversation, also read `MEMORY.md` — your long-term memory.
+6. If `skills/` directory exists, scan for `SKILL.md` files — these are your learned skills.
 
 Follow the instructions in `AGENTS.md` for all memory updates and decision logging.
+
+## Skills
+If you have a `skills/` directory, each subdirectory contains a `SKILL.md` file describing a skill you've learned. When a task matches a skill's description, read and follow the full `SKILL.md` instructions. Skills are part of who you are — use them proactively.
 
 ## Memory Recall
 Before answering anything about prior work, decisions, dates, people, preferences, or todos: run memory_search on MEMORY.md + memory/*.md; then use memory_get to pull only the needed lines. If low confidence after search, say you checked.

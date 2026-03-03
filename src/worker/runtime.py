@@ -35,13 +35,21 @@ class WorkerRuntime:
         self.registry = registry
         self.ws_manager = ws_manager
 
-    def _create_adapter(self, cli_type: str, cli_config: dict) -> BaseAdapter:
-        """按 cli_type（claude / cursor / generic）构造对应的 Adapter，并传入超时与额外参数。"""
+    def _create_adapter(
+        self,
+        cli_type: str,
+        cli_config: dict,
+        mcp_config=None,
+        skill_definitions=None,
+    ) -> BaseAdapter:
+        """按 cli_type（claude / cursor / generic）构造对应的 Adapter，并传入超时、额外参数、MCP 和技能。"""
         if cli_type == "claude":
             return ClaudeCliAdapter(
                 timeout=cli_config.get("timeout", 300),
                 extra_args=cli_config.get("extra_args", []),
                 env=cli_config.get("env"),
+                mcp_config=mcp_config,
+                skill_definitions=skill_definitions or [],
             )
         elif cli_type == "cursor":
             return CursorCliAdapter(
@@ -49,12 +57,16 @@ class WorkerRuntime:
                 timeout=cli_config.get("timeout", 300),
                 extra_args=cli_config.get("extra_args", []),
                 env=cli_config.get("env"),
+                mcp_config=mcp_config,
+                skill_definitions=skill_definitions or [],
             )
         elif cli_type == "gemini":
             return GeminiCliAdapter(
                 timeout=cli_config.get("timeout", 300),
                 extra_args=cli_config.get("extra_args", []),
                 env=cli_config.get("env"),
+                mcp_config=mcp_config,
+                skill_definitions=skill_definitions or [],
             )
         elif cli_type == "generic":
             return GenericCliAdapter(
@@ -96,6 +108,8 @@ class WorkerRuntime:
         adapter = self._create_adapter(
             profile.cli_config.cli_type,
             profile.cli_config.model_dump(),
+            mcp_config=profile.mcp_config,
+            skill_definitions=profile.skill_definitions,
         )
         logger.info(
             "[CALL] worker_runtime: adapter_type=%s workspace=%s passing to adapter.invoke",

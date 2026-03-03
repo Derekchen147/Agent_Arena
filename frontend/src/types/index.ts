@@ -60,6 +60,35 @@ export interface CliConfig {
   env: Record<string, string>;
 }
 
+export interface SkillDefinition {
+  skill_id: string;
+  name: string;
+  description: string;
+  body?: string;  // 仅在 GET /agents/{id}/skills 时返回完整内容
+}
+
+export interface McpServerConfig {
+  server_id: string;
+  server_type: 'bundled' | 'external' | 'infrastructure';
+  transport: string;
+  command: string;
+  args: string[];
+  env: Record<string, string>;
+  required_env: string[];
+  capability: string;
+}
+
+export interface McpConfig {
+  servers: McpServerConfig[];
+}
+
+export interface McpReadiness {
+  server_id: string;
+  type: string;
+  ready: boolean;
+  missing_env: string[];
+}
+
 export interface AgentProfile {
   agent_id: string;
   name: string;
@@ -71,6 +100,8 @@ export interface AgentProfile {
   response_config: ResponseConfig;
   cli_config: CliConfig;
   max_output_tokens: number;
+  skill_definitions: SkillDefinition[];
+  mcp_config: McpConfig | null;
 }
 
 // ── WebSocket Event Types ──

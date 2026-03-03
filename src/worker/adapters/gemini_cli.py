@@ -51,10 +51,14 @@ class GeminiCliAdapter(BaseAdapter):
         timeout: int = 300,
         extra_args: list[str] | None = None,
         env: dict[str, str] | None = None,
+        mcp_config=None,
+        skill_definitions=None,
     ):
         self.timeout = timeout
         self.extra_args = extra_args or []
         self.env = env or {}
+        self.mcp_config = mcp_config
+        self.skill_definitions = skill_definitions or []
 
     async def invoke(
         self,
@@ -77,6 +81,14 @@ class GeminiCliAdapter(BaseAdapter):
         run_env = _subprocess_env(self.env)
         start_time = time.monotonic()
         prompt_bytes = prompt.encode("utf-8")
+
+        # 生成 MCP 配置文件（如果有）
+        mcp_config_path = None
+        if self.mcp_config:
+            from src.mcp.loader import generate_claude_mcp_json
+            mcp_config_path = generate_claude_mcp_json(
+                self.mcp_config, workspace_dir, extra_env=self.env,
+            )
 
         def _run_cmd() -> subprocess.CompletedProcess:
             # 通过 stdin 管道传递 prompt，避免 shell 转义和命令行长度限制
@@ -187,11 +199,18 @@ class GeminiCliAdapter(BaseAdapter):
                 parts.append(f"[{author}]: {msg.content}")
             parts.append("")
 
-        # ── 3. 记忆注入 ──
+        # ── 3. 技能注入 ──
+        if self.skill_definitions:
+            from src.skills.loader import build_skills_prompt_section
+            skills_section = build_skills_prompt_section(self.skill_definitions)
+            if skills_section:
+                parts.append(skills_section)
+
+        # ── 4. 记忆注入 ──
         if input.memory_context:
             parts.append(f"## 相关记忆\n{input.memory_context}\n")
 
-        # ── 4. 当前待回复消息 ──
+        # ── 5. 当前待回复消息 ──
         if input.messages:
             current = input.messages[-1]
             author = current.author_name or current.role

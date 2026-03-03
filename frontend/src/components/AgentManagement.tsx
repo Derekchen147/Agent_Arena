@@ -1,11 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { AgentProfile, UpdateAgentRequest } from '../types';
+import type { AgentProfile, UpdateAgentRequest, SkillDefinition, McpServerConfig, McpReadiness } from '../types';
 import {
   updateAgent,
   onboardAgent,
   deleteAgent,
-  getWorkspaceConfig,
-  updateWorkspaceConfig,
+  getOpenClawFile,
+  updateOpenClawFile,
+  getAgentMcp,
+  updateAgentMcpEnv,
+  createSkill,
+  deleteSkill,
+  addMcpServer,
+  deleteMcpServer,
 } from '../api/client';
 import './AgentManagement.css';
 
@@ -19,7 +25,6 @@ interface FormState {
   agent_id: string;
   name: string;
   avatar: string;
-  role_prompt: string;
   skills: string;
   cli_type: string;
   command: string;
@@ -36,7 +41,6 @@ const EMPTY_FORM: FormState = {
   agent_id: '',
   name: '',
   avatar: '',
-  role_prompt: '',
   skills: '',
   cli_type: 'claude',
   command: '',
@@ -54,7 +58,6 @@ function profileToForm(p: AgentProfile): FormState {
     agent_id: p.agent_id,
     name: p.name,
     avatar: p.avatar,
-    role_prompt: p.role_prompt,
     skills: p.skills.join(', '),
     cli_type: p.cli_config.cli_type,
     command: p.cli_config.command,
@@ -83,7 +86,7 @@ function formToUpdateRequest(f: FormState): UpdateAgentRequest {
   return {
     name: f.name,
     avatar: f.avatar,
-    role_prompt: f.role_prompt,
+    role_prompt: '', // Now handled by SOUL.md
     skills: f.skills.split(',').map((s) => s.trim()).filter(Boolean),
     cli_type: f.cli_type,
     command: f.command,
@@ -101,29 +104,57 @@ export default function AgentManagement({ agents, onAgentsChanged, onBack }: Pro
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [mode, setMode] = useState<'edit' | 'create'>('edit');
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
-  const [workspaceContent, setWorkspaceContent] = useState('');
-  const [workspaceFilename, setWorkspaceFilename] = useState('');
-  const [originalWorkspaceContent, setOriginalWorkspaceContent] = useState('');
+  
+  // OpenClaw MD Files
+  const [soulContent, setSoulContent] = useState('');
+  const [agentsContent, setAgentsContent] = useState('');
+  const [userContent, setUserContent] = useState('');
+  
   const [saving, setSaving] = useState(false);
   const [statusMsg, setStatusMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  // Load agent details when selecting
+  // Skills & MCP state
+  const [mcpServers, setMcpServers] = useState<McpServerConfig[]>([]);
+  const [mcpReadiness, setMcpReadiness] = useState<McpReadiness[]>([]);
+  const [editingMcpEnv, setEditingMcpEnv] = useState<{ serverId: string; env: Record<string, string> } | null>(null);
+
+  // Add skill / MCP modal state
+  const [showAddSkill, setShowAddSkill] = useState(false);
+  const [newSkill, setNewSkill] = useState({ skill_id: '', name: '', description: '', body: '' });
+  const [showAddMcp, setShowAddMcp] = useState(false);
+  const [newMcp, setNewMcp] = useState({ server_id: '', server_type: 'external', command: '', args: '', required_env: '', capability: '' });
+
+  // Load agent details
   const loadAgent = useCallback(
     async (agentId: string) => {
       const agent = agents.find((a) => a.agent_id === agentId);
       if (!agent) return;
       setForm(profileToForm(agent));
+      
+      // Parallel load OpenClaw files
       try {
-        const wc = await getWorkspaceConfig(agentId);
-        setWorkspaceContent(wc.content);
-        setOriginalWorkspaceContent(wc.content);
-        setWorkspaceFilename(wc.filename);
-      } catch {
-        setWorkspaceContent('');
-        setOriginalWorkspaceContent('');
-        const t = agent.cli_config.cli_type;
-        setWorkspaceFilename(t === 'cursor' ? '.cursor/rules/role.mdc' : t === 'gemini' ? 'GEMINI.md' : 'CLAUDE.md');
+        const [soul, agts, user] = await Promise.all([
+          getOpenClawFile(agentId, 'SOUL.md').catch(() => ({ content: '' })),
+          getOpenClawFile(agentId, 'AGENTS.md').catch(() => ({ content: '' })),
+          getOpenClawFile(agentId, 'USER.md').catch(() => ({ content: '' })),
+        ]);
+        setSoulContent(soul.content);
+        setAgentsContent(agts.content);
+        setUserContent(user.content);
+      } catch (err) {
+        console.error('Failed to load OpenClaw files', err);
       }
+
+      // Load MCP data
+      try {
+        const mcpData = await getAgentMcp(agentId);
+        setMcpServers(mcpData.servers);
+        setMcpReadiness(mcpData.readiness);
+      } catch {
+        setMcpServers([]);
+        setMcpReadiness([]);
+      }
+      setEditingMcpEnv(null);
     },
     [agents],
   );
@@ -144,23 +175,19 @@ export default function AgentManagement({ agents, onAgentsChanged, onBack }: Pro
     setSelectedAgentId(null);
     setMode('create');
     setForm(EMPTY_FORM);
-    setWorkspaceContent('');
-    setOriginalWorkspaceContent('');
-    setWorkspaceFilename('CLAUDE.md');
+    setSoulContent('');
+    setAgentsContent('');
+    setUserContent('');
     setStatusMsg(null);
+    setMcpServers([]);
+    setMcpReadiness([]);
+    setEditingMcpEnv(null);
+    setShowAddSkill(false);
+    setShowAddMcp(false);
   };
 
   const updateField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
-    if (key === 'cli_type') {
-      if (value === 'cursor') {
-        setWorkspaceFilename('.cursor/rules/role.mdc');
-      } else if (value === 'gemini') {
-        setWorkspaceFilename('GEMINI.md');
-      } else {
-        setWorkspaceFilename('CLAUDE.md');
-      }
-    }
   };
 
   const handleSave = async () => {
@@ -183,25 +210,38 @@ export default function AgentManagement({ agents, onAgentsChanged, onBack }: Pro
           agent_id: form.agent_id.trim(),
           name: form.name.trim(),
           avatar: form.avatar.trim() || undefined,
-          role_prompt: form.role_prompt.trim() || undefined,
+          role_prompt: soulContent.trim() || undefined, // New: use soulContent as role_prompt
           skills: form.skills.split(',').map((s) => s.trim()).filter(Boolean),
           cli_type: form.cli_type,
           priority_keywords: form.priority_keywords.split(',').map((s) => s.trim()).filter(Boolean),
         });
+        
+        // If created, the SOUL.md is already written by onboardAgent backend logic.
+        // We might want to write AGENTS.md and USER.md if they have content.
+        if (agentsContent.trim()) {
+          await updateOpenClawFile(form.agent_id.trim(), 'AGENTS.md', agentsContent);
+        }
+        if (userContent.trim()) {
+          await updateOpenClawFile(form.agent_id.trim(), 'USER.md', userContent);
+        }
+
         onAgentsChanged();
         setSelectedAgentId(form.agent_id.trim());
         setMode('edit');
         setStatusMsg({ type: 'success', text: '员工创建成功' });
       } else {
         if (!selectedAgentId) return;
+        
+        // 1. Update YAML metadata
         const req = formToUpdateRequest(form);
         await updateAgent(selectedAgentId, req);
 
-        // Save workspace config if changed
-        if (workspaceContent !== originalWorkspaceContent) {
-          await updateWorkspaceConfig(selectedAgentId, workspaceContent);
-          setOriginalWorkspaceContent(workspaceContent);
-        }
+        // 2. Update OpenClaw MD files
+        await Promise.all([
+          updateOpenClawFile(selectedAgentId, 'SOUL.md', soulContent),
+          updateOpenClawFile(selectedAgentId, 'AGENTS.md', agentsContent),
+          updateOpenClawFile(selectedAgentId, 'USER.md', userContent),
+        ]);
 
         onAgentsChanged();
         setStatusMsg({ type: 'success', text: '保存成功' });
@@ -226,6 +266,100 @@ export default function AgentManagement({ agents, onAgentsChanged, onBack }: Pro
       setStatusMsg({ type: 'success', text: '已删除' });
     } catch (err) {
       setStatusMsg({ type: 'error', text: `删除失败: ${err}` });
+    }
+  };
+
+  const handleSaveMcpEnv = async () => {
+    if (!selectedAgentId || !editingMcpEnv) return;
+    try {
+      await updateAgentMcpEnv(selectedAgentId, editingMcpEnv.serverId, editingMcpEnv.env);
+      const mcpData = await getAgentMcp(selectedAgentId);
+      setMcpServers(mcpData.servers);
+      setMcpReadiness(mcpData.readiness);
+      setEditingMcpEnv(null);
+      setStatusMsg({ type: 'success', text: 'MCP 环境变量已保存' });
+    } catch (err) {
+      setStatusMsg({ type: 'error', text: `MCP 保存失败: ${err}` });
+    }
+  };
+
+  const refreshAgentData = async () => {
+    if (!selectedAgentId) return;
+    onAgentsChanged();
+    try {
+      const mcpData = await getAgentMcp(selectedAgentId);
+      setMcpServers(mcpData.servers);
+      setMcpReadiness(mcpData.readiness);
+    } catch { /* ignore */ }
+  };
+
+  const handleCreateSkill = async () => {
+    if (!selectedAgentId) return;
+    if (!newSkill.skill_id.trim() || !newSkill.name.trim()) {
+      setStatusMsg({ type: 'error', text: 'Skill ID 和名称不能为空' });
+      return;
+    }
+    try {
+      await createSkill(selectedAgentId, {
+        skill_id: newSkill.skill_id.trim(),
+        name: newSkill.name.trim(),
+        description: newSkill.description.trim(),
+        body: newSkill.body.trim() || undefined,
+      });
+      setShowAddSkill(false);
+      setNewSkill({ skill_id: '', name: '', description: '', body: '' });
+      setStatusMsg({ type: 'success', text: '技能已创建' });
+      await refreshAgentData();
+    } catch (err) {
+      setStatusMsg({ type: 'error', text: `创建技能失败: ${err}` });
+    }
+  };
+
+  const handleDeleteSkill = async (skillId: string) => {
+    if (!selectedAgentId) return;
+    if (!confirm(`确定删除技能「${skillId}」？`)) return;
+    try {
+      await deleteSkill(selectedAgentId, skillId);
+      setStatusMsg({ type: 'success', text: '技能已删除' });
+      await refreshAgentData();
+    } catch (err) {
+      setStatusMsg({ type: 'error', text: `删除技能失败: ${err}` });
+    }
+  };
+
+  const handleAddMcp = async () => {
+    if (!selectedAgentId) return;
+    if (!newMcp.server_id.trim() || !newMcp.command.trim()) {
+      setStatusMsg({ type: 'error', text: 'Server ID 和命令不能为空' });
+      return;
+    }
+    try {
+      await addMcpServer(selectedAgentId, {
+        server_id: newMcp.server_id.trim(),
+        server_type: newMcp.server_type || 'external',
+        command: newMcp.command.trim(),
+        args: newMcp.args.trim() ? newMcp.args.split(',').map(s => s.trim()).filter(Boolean) : undefined,
+        required_env: newMcp.required_env.trim() ? newMcp.required_env.split(',').map(s => s.trim()).filter(Boolean) : undefined,
+        capability: newMcp.capability.trim() || undefined,
+      });
+      setShowAddMcp(false);
+      setNewMcp({ server_id: '', server_type: 'external', command: '', args: '', required_env: '', capability: '' });
+      setStatusMsg({ type: 'success', text: 'MCP 服务已添加' });
+      await refreshAgentData();
+    } catch (err) {
+      setStatusMsg({ type: 'error', text: `添加 MCP 失败: ${err}` });
+    }
+  };
+
+  const handleDeleteMcp = async (serverId: string) => {
+    if (!selectedAgentId) return;
+    if (!confirm(`确定删除 MCP 服务「${serverId}」？`)) return;
+    try {
+      await deleteMcpServer(selectedAgentId, serverId);
+      setStatusMsg({ type: 'success', text: 'MCP 服务已删除' });
+      await refreshAgentData();
+    } catch (err) {
+      setStatusMsg({ type: 'error', text: `删除 MCP 失败: ${err}` });
     }
   };
 
@@ -325,109 +459,90 @@ export default function AgentManagement({ agents, onAgentsChanged, onBack }: Pro
               />
             </div>
             {mode === 'edit' && selectedAgent && (
-              <>
-                <div className="am-form-row">
-                  <label className="am-form-label">工作目录</label>
-                  <input
-                    className="am-form-input"
-                    value={selectedAgent.workspace_dir}
-                    readOnly
-                  />
-                </div>
-                {selectedAgent.repo_url && (
-                  <div className="am-form-row">
-                    <label className="am-form-label">Git 仓库</label>
-                    <input
-                      className="am-form-input"
-                      value={selectedAgent.repo_url}
-                      readOnly
-                    />
-                  </div>
-                )}
-              </>
+              <div className="am-form-row">
+                <label className="am-form-label">工作目录</label>
+                <input
+                  className="am-form-input"
+                  value={selectedAgent.workspace_dir}
+                  readOnly
+                />
+              </div>
             )}
           </div>
 
-          {/* Role & Skills */}
+          {/* Persona (The Soul) */}
           <div className="am-section">
-            <div className="am-section-title">角色与技能</div>
+            <div className="am-section-title">灵魂定义 (SOUL.md)</div>
             <div className="am-form-row">
-              <label className="am-form-label">角色描述 / Role Prompt</label>
               <textarea
-                className="am-form-textarea"
-                value={form.role_prompt}
-                onChange={(e) => updateField('role_prompt', e.target.value)}
-                placeholder="描述该员工的角色定位和职责..."
+                className="am-workspace-editor"
+                style={{ background: '#f9f9f9', color: '#1d1d1f', border: '1px solid #d2d2d7' }}
+                value={soulContent}
+                onChange={(e) => setSoulContent(e.target.value)}
+                placeholder="我是谁？我的性格和价值观..."
+                rows={10}
+              />
+              <div className="am-form-hint">
+                定义员工的角色定位、语气、行为准则。
+              </div>
+            </div>
+          </div>
+
+          {/* Rules & Guidelines (The Agents) */}
+          <div className="am-section">
+            <div className="am-section-title">运行准则 (AGENTS.md)</div>
+            <div className="am-form-row">
+              <textarea
+                className="am-workspace-editor"
+                style={{ background: '#f9f9f9', color: '#1d1d1f', border: '1px solid #d2d2d7' }}
+                value={agentsContent}
+                onChange={(e) => setAgentsContent(e.target.value)}
+                placeholder="如何加载记忆？如何协作？"
+                rows={8}
+              />
+              <div className="am-form-hint">
+                定义记忆加载流程、协作格式（如 NEXT_MENTIONS）。
+              </div>
+            </div>
+          </div>
+
+          {/* User Context (The User) */}
+          <div className="am-section">
+            <div className="am-section-title">用户偏好 (USER.md)</div>
+            <div className="am-form-row">
+              <textarea
+                className="am-workspace-editor"
+                style={{ background: '#f9f9f9', color: '#1d1d1f', border: '1px solid #d2d2d7' }}
+                value={userContent}
+                onChange={(e) => setUserContent(e.target.value)}
+                placeholder="关于我的主人..."
                 rows={5}
               />
               <div className="am-form-hint">
-                此内容会写入 YAML 配置的 role_prompt 字段，并在每次调用时注入给 Agent
+                记录关于用户的特定信息、偏好、习惯。
               </div>
             </div>
+          </div>
+
+          {/* Skills Tags */}
+          <div className="am-section">
+            <div className="am-section-title">技能标签</div>
             <div className="am-form-row">
-              <label className="am-form-label">技能标签（逗号分隔）</label>
               <input
                 className="am-form-input"
                 value={form.skills}
                 onChange={(e) => updateField('skills', e.target.value)}
                 placeholder="架构设计, 需求分析, 技术选型"
               />
-            </div>
-          </div>
-
-          {/* Response Config */}
-          <div className="am-section">
-            <div className="am-section-title">响应配置</div>
-            <div className="am-form-row">
-              <div className="am-form-checkbox">
-                <input
-                  type="checkbox"
-                  id="auto_respond"
-                  checked={form.auto_respond}
-                  onChange={(e) => updateField('auto_respond', e.target.checked)}
-                />
-                <label htmlFor="auto_respond">自动响应（may_reply 时自动判断是否回复）</label>
+              <div className="am-form-hint">
+                用于自动编排时的匹配关键词（逗号分隔）。
               </div>
-            </div>
-            <div className="am-form-row-inline">
-              <div className="am-form-row">
-                <label className="am-form-label">相关性阈值（0~1）</label>
-                <input
-                  className="am-form-input"
-                  type="number"
-                  min={0}
-                  max={1}
-                  step={0.1}
-                  value={form.response_threshold}
-                  onChange={(e) => updateField('response_threshold', parseFloat(e.target.value) || 0)}
-                />
-              </div>
-              <div className="am-form-row">
-                <label className="am-form-label">最大输出 Token</label>
-                <input
-                  className="am-form-input"
-                  type="number"
-                  min={100}
-                  step={100}
-                  value={form.max_output_tokens}
-                  onChange={(e) => updateField('max_output_tokens', parseInt(e.target.value) || 2000)}
-                />
-              </div>
-            </div>
-            <div className="am-form-row">
-              <label className="am-form-label">优先关键词（逗号分隔）</label>
-              <input
-                className="am-form-input"
-                value={form.priority_keywords}
-                onChange={(e) => updateField('priority_keywords', e.target.value)}
-                placeholder="架构, 设计, 方案"
-              />
             </div>
           </div>
 
           {/* CLI Config */}
           <div className="am-section">
-            <div className="am-section-title">CLI 配置</div>
+            <div className="am-section-title">驱动引擎 (CLI)</div>
             <div className="am-form-row-inline">
               <div className="am-form-row">
                 <label className="am-form-label">CLI 类型</label>
@@ -447,8 +562,6 @@ export default function AgentManagement({ agents, onAgentsChanged, onBack }: Pro
                 <input
                   className="am-form-input"
                   type="number"
-                  min={10}
-                  step={10}
                   value={form.timeout}
                   onChange={(e) => updateField('timeout', parseInt(e.target.value) || 300)}
                 />
@@ -461,63 +574,109 @@ export default function AgentManagement({ agents, onAgentsChanged, onBack }: Pro
                   className="am-form-input"
                   value={form.command}
                   onChange={(e) => updateField('command', e.target.value)}
-                  placeholder={form.cli_type === 'cursor' ? 'agent（默认）或完整路径' : '可执行文件路径'}
+                  placeholder={form.cli_type === 'cursor' ? 'agent（默认）' : '可执行文件路径'}
                 />
-                <div className="am-form-hint">
-                  {form.cli_type === 'cursor'
-                    ? '若 PATH 中无 agent 命令，请填完整路径，如 C:/Users/.../agent.exe'
-                    : '自定义 CLI 的可执行文件路径'}
-                </div>
               </div>
             )}
             <div className="am-form-row">
-              <label className="am-form-label">额外参数（逗号分隔）</label>
-              <input
-                className="am-form-input"
-                value={form.extra_args}
-                onChange={(e) => updateField('extra_args', e.target.value)}
-                placeholder="--flag1, --flag2=value"
-              />
-            </div>
-            <div className="am-form-row">
-              <label className="am-form-label">环境变量（每行一个 KEY=VALUE）</label>
+              <label className="am-form-label">环境变量</label>
               <textarea
                 className="am-form-textarea"
                 value={form.env}
                 onChange={(e) => updateField('env', e.target.value)}
-                placeholder={'HTTP_PROXY=http://127.0.0.1:7897\nHTTPS_PROXY=http://127.0.0.1:7897'}
-                rows={3}
+                placeholder={'HTTP_PROXY=...'}
+                rows={2}
               />
-              {form.cli_type === 'gemini' && (
-                <div className="am-form-hint">
-                  Gemini CLI 需要访问 Google 服务，如需代理请在此配置：
-                  HTTP_PROXY / HTTPS_PROXY / ALL_PROXY
-                </div>
-              )}
             </div>
           </div>
 
-          {/* Workspace Config File */}
-          {mode === 'edit' && selectedAgentId && (
-            <div className="am-section">
-              <div className="am-section-title">Workspace 配置文件</div>
-              <div className="am-workspace-header">
-                <span className="am-workspace-filename">{workspaceFilename}</span>
-                <div className="am-form-hint">
-                  {form.cli_type === 'cursor'
-                    ? 'Cursor 会自动加载 .cursor/rules/*.mdc 作为 system prompt'
-                    : form.cli_type === 'gemini'
-                    ? 'Gemini CLI 会读取工作目录中的 GEMINI.md 作为上下文'
-                    : 'Claude CLI 会读取工作目录中的 CLAUDE.md 作为上下文'}
-                </div>
+          {/* Response Config */}
+          <div className="am-section">
+            <div className="am-section-title">响应配置</div>
+            <div className="am-form-row">
+              <div className="am-form-checkbox">
+                <input
+                  type="checkbox"
+                  id="auto_respond"
+                  checked={form.auto_respond}
+                  onChange={(e) => updateField('auto_respond', e.target.checked)}
+                />
+                <label htmlFor="auto_respond">自动响应判断</label>
               </div>
-              <textarea
-                className="am-workspace-editor"
-                value={workspaceContent}
-                onChange={(e) => setWorkspaceContent(e.target.value)}
-                placeholder="在此编辑 workspace 角色配置文件内容..."
-                rows={12}
-              />
+            </div>
+            <div className="am-form-row-inline">
+              <div className="am-form-row">
+                <label className="am-form-label">相关性阈值</label>
+                <input
+                  className="am-form-input"
+                  type="number"
+                  step={0.1}
+                  value={form.response_threshold}
+                  onChange={(e) => updateField('response_threshold', parseFloat(e.target.value) || 0.6)}
+                />
+              </div>
+              <div className="am-form-row">
+                <label className="am-form-label">Max Token</label>
+                <input
+                  className="am-form-input"
+                  type="number"
+                  value={form.max_output_tokens}
+                  onChange={(e) => updateField('max_output_tokens', parseInt(e.target.value) || 2000)}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Skills (Advanced) */}
+          {mode === 'edit' && selectedAgent && (
+            <div className="am-section">
+              <div className="am-section-title-row">
+                <div className="am-section-title" style={{ marginBottom: 0 }}>核心技能 (SKILL.md)</div>
+                <button className="am-btn am-btn-sm am-btn-add" onClick={() => setShowAddSkill(true)}>+ 新增</button>
+              </div>
+              {showAddSkill && (
+                <div className="am-add-form">
+                  <input className="am-form-input" placeholder="ID" onChange={e=>setNewSkill(s=>({...s, skill_id:e.target.value}))} style={{marginBottom:8}}/>
+                  <input className="am-form-input" placeholder="名称" onChange={e=>setNewSkill(s=>({...s, name:e.target.value}))} style={{marginBottom:8}}/>
+                  <div className="am-add-form-actions">
+                    <button className="am-btn am-btn-primary am-btn-sm" onClick={handleCreateSkill}>创建</button>
+                    <button className="am-btn am-btn-sm" onClick={() => setShowAddSkill(false)}>取消</button>
+                  </div>
+                </div>
+              )}
+              <div className="am-skills-list">
+                {selectedAgent.skill_definitions?.map((skill) => (
+                  <div key={skill.skill_id} className="am-skill-card">
+                    <div className="am-skill-header">
+                      <span className="am-skill-name">{skill.name}</span>
+                      <button className="am-btn-icon am-btn-icon-danger" onClick={() => handleDeleteSkill(skill.skill_id)}>&times;</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* MCP Servers */}
+          {mode === 'edit' && selectedAgent && (
+            <div className="am-section">
+              <div className="am-section-title-row">
+                <div className="am-section-title" style={{ marginBottom: 0 }}>MCP 服务</div>
+                <button className="am-btn am-btn-sm am-btn-add" onClick={() => setShowAddMcp(true)}>+ 新增</button>
+              </div>
+              <div className="am-mcp-list">
+                {mcpServers.map((srv) => (
+                  <div key={srv.server_id} className="am-mcp-card">
+                    <div className="am-mcp-header">
+                      <div className="am-mcp-title-row">
+                        <span className="am-mcp-name">{srv.server_id}</span>
+                        <button className="am-btn-icon am-btn-icon-danger am-mcp-delete-btn" onClick={() => handleDeleteMcp(srv.server_id)}>&times;</button>
+                      </div>
+                      <div className="am-mcp-cmd"><code>{srv.command}</code></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>

@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
 
 from src.models.protocol import AgentInput, AgentOutput
+
+if TYPE_CHECKING:
+    from src.mcp.loader import McpConfig
+    from src.skills.loader import SkillDefinition
 
 
 class BaseAdapter(ABC):
@@ -16,6 +20,10 @@ class BaseAdapter(ABC):
     2. 把 AgentInput 转为 CLI 的输入
     3. 把 CLI 的输出解析为 AgentOutput
     """
+
+    # 运行时注入的 MCP 配置和技能定义
+    mcp_config: McpConfig | None = None
+    skill_definitions: list[SkillDefinition] = []
 
     @abstractmethod
     async def invoke(

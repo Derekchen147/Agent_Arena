@@ -193,6 +193,23 @@ class WorkspaceManager:
 
         logger.info(f"Saved agent config to workspace: {yaml_path}")
 
+    def read_openclaw_file(self, agent_id: str, filename: str) -> str:
+        """读取工作区下的特定 OpenClaw 文件（SOUL.md, AGENTS.md, USER.md）。"""
+        profile = self.registry.get_agent(agent_id)
+        file_path = Path(profile.workspace_dir) / filename
+        if not file_path.exists():
+            return ""
+        return file_path.read_text(encoding="utf-8")
+
+    def write_openclaw_file(self, agent_id: str, filename: str, content: str) -> None:
+        """写入工作区下的特定 OpenClaw 文件。"""
+        profile = self.registry.get_agent(agent_id)
+        file_path = Path(profile.workspace_dir) / filename
+        file_path.write_text(content, encoding="utf-8")
+        if filename == "SOUL.md":
+            profile.role_prompt = content
+        logger.info(f"Wrote {filename} for {agent_id}")
+
     def read_workspace_config(self, agent_id: str) -> tuple[str, str]:
         """读取 SOUL.md 的内容（现在人设主要在这里）。"""
         profile = self.registry.get_agent(agent_id)
