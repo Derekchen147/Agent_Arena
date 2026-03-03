@@ -30,8 +30,11 @@ class CliConfig(BaseModel):
 class AgentProfile(BaseModel):
     """Agent 档案：ID、名称、工作目录、角色提示、技能、响应与 CLI 配置。
 
-    工作目录（workspace_dir）即 Agent 的「地盘」，上下文与可操作文件均在此；
-    可为 Git 仓库 clone 后的本地路径。
+    遵循 OpenClaw 风格：
+    - 角色提示从 workspace_dir/SOUL.md 加载 (role_prompt)
+    - 元数据从 workspace_dir/agent.yaml 加载 (name, avatar, skills, cli_config 等)
+    - 运行指令从 workspace_dir/AGENTS.md 加载
+    - 长期记忆在 workspace_dir/MEMORY.md
     """
 
     agent_id: str
@@ -44,7 +47,7 @@ class AgentProfile(BaseModel):
     # 工作目录来源：如果是 git 仓库，填 clone URL
     repo_url: str = ""
 
-    # 角色描述（会写入工作目录的配置文件，如 CLAUDE.md）
+    # 角色描述（从 SOUL.md 加载，不再直接从 YAML 加载）
     role_prompt: str = ""
 
     skills: list[str] = Field(default_factory=list)
@@ -55,3 +58,41 @@ class AgentProfile(BaseModel):
 
     # Token 控制（用于上下文截断策略）
     max_output_tokens: int = 2000
+
+    @classmethod
+    def from_workspace(cls, workspace_path: str | Path) -> AgentProfile:
+        """从工作目录加载 Agent 配置。
+
+        1. 加载 agent.yaml 获取元数据
+        2. 加载 SOUL.md 获取 role_prompt
+        """
+        import yaml
+        from pathlib import Path
+
+        path = Path(workspace_path)
+        agent_yaml = path / "agent.yaml"
+        soul_md = path / "SOUL.md"
+
+        if not agent_yaml.exists():
+            raise FileNotFoundError(f"agent.yaml not found in {workspace_path}")
+
+        with open(agent_yaml, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+
+        role_prompt = ""
+        if soul_md.exists():
+            role_prompt = soul_md.read_text(encoding="utf-8").strip()
+
+        # 合并数据
+        return cls(
+            agent_id=data.get("agent_id", path.name),
+            name=data.get("name", ""),
+            avatar=data.get("avatar", ""),
+            workspace_dir=str(path.absolute()),
+            repo_url=data.get("repo_url", ""),
+            role_prompt=role_prompt,
+            skills=data.get("skills", []),
+            response_config=ResponseConfig(**data.get("response_config", {})),
+            cli_config=CliConfig(**data.get("cli_config", {})),
+            max_output_tokens=data.get("max_output_tokens", 2000),
+        )

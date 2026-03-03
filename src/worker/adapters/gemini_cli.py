@@ -165,10 +165,10 @@ class GeminiCliAdapter(BaseAdapter):
             return False
 
     def _build_prompt(self, input: AgentInput) -> str:
-        """构建 Prompt，逻辑同 ClaudeCliAdapter。"""
+        """将 AgentInput 转为发给 Gemini CLI 的 prompt。"""
         parts: list[str] = []
 
-        # 1. 当前会话成员
+        # ── 1. 当前会话成员 ──
         agent_label = f"「{input.agent_name}」({input.agent_id})" if input.agent_name else f"({input.agent_id})"
         parts.append(f"## 当前会话成员\n你是{agent_label}。")
         if input.peers:
@@ -178,46 +178,28 @@ class GeminiCliAdapter(BaseAdapter):
                 parts.append(f"- {p.name} ({p.agent_id}) — 技能: {skills}")
         parts.append("")
 
-        # 2. 对话记录
+        # ── 2. 对话记录 ──
         if input.messages and len(input.messages) > 1:
             history = input.messages[:-1]
-            parts.append("## 对话记录（只读上下文，不要回复这些历史消息）")
+            parts.append("## 对话记录（只读上下文，不要重复回复这些消息）")
             for msg in history:
                 author = msg.author_name or msg.role
                 parts.append(f"[{author}]: {msg.content}")
             parts.append("")
 
-        # 3. 记忆注入
+        # ── 3. 记忆注入 ──
         if input.memory_context:
             parts.append(f"## 相关记忆\n{input.memory_context}\n")
 
-        # 4. 当前待回复消息
-        parts.append("---\n")
+        # ── 4. 当前待回复消息 ──
         if input.messages:
             current = input.messages[-1]
             author = current.author_name or current.role
-            parts.append("## 当前待回复消息")
+            parts.append("---\n## 当前待回复消息")
             parts.append(f"发送者: {author}")
-            parts.append(f"内容:\n{current.content}")
-        parts.append("\n---\n")
+            parts.append(f"内容:\n{current.content}\n---\n")
 
-        # 5. 回复规则
-        rules = ["## 回复规则"]
-        rules.append("1. 只针对「当前待回复消息」回复，「对话记录」仅作为上下文参考，无需特别回复")
-        if input.prefer_concise:
-            rules.append("2. 简洁回复，突出关键信息")
-        if input.invocation == "may_reply":
-            rules.append("3. 如果你认为这条消息与你的职责无关，仅回复：SKIP")
-        parts.append("\n".join(rules))
-
-        # 6. 协作
-        parts.append(
-            "\n## 协作\n"
-            "如果你需要其他同事参与，在回复末尾用这个格式"
-            "（agent_id 必须来自「当前会话成员」列表）：\n"
-            "<!--NEXT_MENTIONS:[\"agent_id_1\",\"agent_id_2\"]-->"
-        )
-
+        parts.append("请根据以上信息，并结合你工作目录下的 SOUL.md 和 AGENTS.md 进行回复。")
         return "\n".join(parts)
 
     def _parse_output(self, raw_output: str, input: AgentInput, prompt: str = "", duration_ms: int = 0) -> AgentOutput:

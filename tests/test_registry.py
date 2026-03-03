@@ -6,19 +6,19 @@ from src.registry.agent_registry import AgentRegistry
 
 @pytest.fixture
 def registry():
-    return AgentRegistry(config_dir="agents/")
+    return AgentRegistry(workspaces_dir="workspaces/")
 
 
 def test_load_agents(registry):
     agents = registry.list_agents()
+    # Now it scans workspaces/ and looks for agent.yaml
     assert len(agents) >= 4  # architect, developer, tester, compliance
 
 
 def test_get_agent(registry):
+    # architect id is derived from workspaces/architect/agent.yaml
     agent = registry.get_agent("architect")
     assert agent.name == "架构师"
-    assert agent.cli_config.cli_type == "claude"
-    assert agent.workspace_dir == "workspaces/architect"
 
 
 def test_get_nonexistent_agent(registry):

@@ -18,47 +18,33 @@ logger = logging.getLogger(__name__)
 class AgentRegistry:
     """内存中的 Agent 配置表：agent_id -> AgentProfile，支持从目录加载与重载。"""
 
-    def __init__(self, config_dir: str = "agents/"):
-        """指定配置目录并立即从该目录加载所有 *.yaml。"""
+    def __init__(self, workspaces_dir: str = "workspaces/"):
+        """扫描 workspaces 目录并从每个子目录加载 agent.yaml + SOUL.md。"""
         self.agents: dict[str, AgentProfile] = {}
-        self.config_dir = config_dir
-        self._load_from_dir(config_dir)
+        self.workspaces_dir = workspaces_dir
+        self._load_from_workspaces(workspaces_dir)
 
-    def _load_from_dir(self, config_dir: str) -> None:
-        """遍历目录下所有 .yaml 文件，解析为 AgentProfile 并写入 self.agents。"""
-        config_path = Path(config_dir)
-        if not config_path.exists():
-            logger.warning(f"Agent config directory not found: {config_dir}")
+    def _load_from_workspaces(self, workspaces_dir: str) -> None:
+        """遍历 workspaces 目录下所有子目录，尝试从每个子目录加载 AgentProfile。"""
+        workspaces_path = Path(workspaces_dir)
+        if not workspaces_path.exists():
+            logger.warning(f"Workspaces directory not found: {workspaces_dir}")
             return
 
-        for file in config_path.glob("*.yaml"):
+        for subdir in workspaces_path.iterdir():
+            if not subdir.is_dir():
+                continue
+            
+            agent_yaml = subdir / "agent.yaml"
+            if not agent_yaml.exists():
+                continue
+
             try:
-                profile = self._load_profile(file)
+                profile = AgentProfile.from_workspace(subdir)
                 self.agents[profile.agent_id] = profile
-                logger.info(f"Loaded agent: {profile.agent_id} ({profile.name}) -> {profile.workspace_dir}")
+                logger.info(f"Loaded agent from workspace: {profile.agent_id} ({profile.name})")
             except Exception as e:
-                logger.error(f"Failed to load agent from {file}: {e}")
-
-    def _load_profile(self, file: Path) -> AgentProfile:
-        """读取单个 YAML 文件，解析 response_config / cli_config 并构造 AgentProfile。"""
-        with open(file, "r", encoding="utf-8") as f:
-            data = yaml.safe_load(f)
-
-        response_config = ResponseConfig(**(data.get("response_config", {})))
-        cli_config = CliConfig(**(data.get("cli_config", {})))
-
-        return AgentProfile(
-            agent_id=data["agent_id"],
-            name=data.get("name", ""),
-            avatar=data.get("avatar", ""),
-            workspace_dir=data.get("workspace_dir", ""),
-            repo_url=data.get("repo_url", ""),
-            role_prompt=data.get("role_prompt", ""),
-            skills=data.get("skills", []),
-            response_config=response_config,
-            cli_config=cli_config,
-            max_output_tokens=data.get("max_output_tokens", 2000),
-        )
+                logger.error(f"Failed to load agent from workspace {subdir}: {e}")
 
     def register_agent(self, profile: AgentProfile) -> None:
         """将一名 Agent 加入注册表（如 onboard 完成后）；同 id 会覆盖。"""
@@ -89,6 +75,6 @@ class AgentRegistry:
         ]
 
     def reload(self) -> None:
-        """清空当前表并从 config_dir 重新加载所有 YAML。"""
+        """清空当前表并重新从 workspaces 目录扫描加载。"""
         self.agents.clear()
-        self._load_from_dir(self.config_dir)
+        self._load_from_workspaces(self.workspaces_dir)

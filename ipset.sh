@@ -11,7 +11,6 @@ $socksPort = "7897"  # 比如：7891/7893/10808
 # 设置代理powershell（用你的真实端口）
 $env:HTTP_PROXY="http://127.0.0.1:7897"
 $env:HTTPS_PROXY="http://127.0.0.1:7897"
-$env:ALL_PROXY="socks5://127.0.0.1:7897"
 cd D:\projects\Agent_Arena
 
 uvicorn src.main:app --reload

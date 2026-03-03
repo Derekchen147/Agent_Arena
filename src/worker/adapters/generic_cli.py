@@ -70,12 +70,19 @@ class GenericCliAdapter(BaseAdapter):
         return bool(self.command)
 
     def _build_prompt(self, input: AgentInput) -> str:
-        """将 role_prompt 与 messages 拼成一段文本，作为 CLI 的 stdin。"""
+        """将消息拼成一段文本，并引导 Agent 加载工作目录下的 OpenClaw 配置。"""
         parts = []
-        if input.role_prompt:
-            parts.append(f"[System] {input.role_prompt}")
+        
+        # 1. 引导语
+        agent_label = f"「{input.agent_name}」({input.agent_id})" if input.agent_name else f"({input.agent_id})"
+        parts.append(f"你是{agent_label}。请根据你工作目录下的 SOUL.md 和 AGENTS.md 准则进行回复。")
+        parts.append("")
+
+        # 2. 对话记录
         for msg in input.messages:
-            parts.append(f"[{msg.author_name or msg.role}] {msg.content}")
+            author = msg.author_name or msg.role
+            parts.append(f"[{author}]: {msg.content}")
+        
         return "\n".join(parts)
 
     def _parse_output(self, content: str, input: AgentInput) -> AgentOutput:

@@ -86,7 +86,7 @@ async def lifespan(app: FastAPI):
     await auth_service.initialize()
 
     # 初始化 Agent 注册表、记忆存储、WebSocket 广播、工作区管理
-    registry = AgentRegistry(config_dir="agents/")
+    registry = AgentRegistry(workspaces_dir="workspaces/")
     memory_store = MemoryStore(memory_dir="data/memory")
     call_logger = CallLogger(log_dir="data/logs")
     personal_memory = PersonalMemoryManager()
@@ -95,7 +95,6 @@ async def lifespan(app: FastAPI):
     workspace_manager = WorkspaceManager(
         registry=registry,
         workspaces_dir="workspaces",
-        agents_config_dir="agents",
     )
 
     # 初始化上下文构建器与 Worker 运行时
