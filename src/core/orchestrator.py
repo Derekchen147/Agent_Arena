@@ -148,7 +148,7 @@ class Orchestrator:
         await self.execute_turn(turn, group_id, config)
 
     async def execute_turn(self, turn: Turn, group_id: str, config: GroupConfig) -> None:
-        """执行一个完整回合：先并行执行 must_reply，再并行执行 may_reply，最后处理链式 @。"""
+        """执行一个完整回合：串行执行以保证上下文实时更新。"""
         logger.info(
             "[CALL] execute_turn: turn_id=%s group_id=%s chain_depth=%s",
             turn.turn_id, group_id, turn.chain_depth,
@@ -156,24 +156,17 @@ class Orchestrator:
         all_next_mentions: set[str] = set()
         replied_agents: set[str] = set()
 
-        # Phase A：must_reply（被 @ 的）并行调用
-        if turn.must_reply_agents:
-            logger.info("[CALL] Phase A (must_reply) start: agents=%s", turn.must_reply_agents)
-            must_results = await asyncio.gather(
-                *[self._invoke_one(aid, group_id, "must_reply", turn) for aid in turn.must_reply_agents],
-                return_exceptions=True,
-            )
-
-            for agent_id, result in zip(turn.must_reply_agents, must_results):
-                if isinstance(result, Exception):
-                    logger.error("[CALL] Agent %s failed: %s", agent_id, result, exc_info=True)
-                    continue
+        # Phase A：must_reply（被 @ 的）
+        # 改为串行执行，确保后一个被 @ 的人能看到前一个人的回复
+        for agent_id in turn.must_reply_agents:
+            logger.info("[CALL] Phase A (must_reply) invoke: agent=%s", agent_id)
+            try:
+                result = await self._invoke_one(agent_id, group_id, "must_reply", turn)
                 output: AgentOutput = result
                 output = await self._process_memory_markers(output, agent_id, group_id)
-                # 保存调用日志 + 广播 turn_log 事件
-                await self._save_call_log_and_broadcast(
-                    output, agent_id, group_id, turn.turn_id
-                )
+                
+                # 立即保存并广播，这样下一个 Agent 就能看到这条消息
+                await self._save_call_log_and_broadcast(output, agent_id, group_id, turn.turn_id)
                 await self.session_manager.save_message(
                     group_id=group_id,
                     author_id=agent_id,
@@ -192,62 +185,54 @@ class Orchestrator:
                     })
                 all_next_mentions.update(output.next_mentions)
                 replied_agents.add(agent_id)
+            except Exception as e:
+                logger.error("[CALL] Agent %s failed: %s", agent_id, e, exc_info=True)
 
-            logger.info(
-                "[CALL] Phase A done: replied=%s next_mentions=%s",
-                list(replied_agents), list(all_next_mentions),
-            )
-
-        # Phase B：may_reply（可选）在剩余名额内并行调用
+        # Phase B：may_reply（可选）
+        # 同样改为串行，避免多人同时抢答导致的上下文错乱
         remaining = turn.max_responders - len(replied_agents)
         if remaining > 0 and turn.may_reply_agents:
-            may_agents = [
-                aid for aid in turn.may_reply_agents if aid not in replied_agents
-            ][:remaining]
-            logger.info(
-                "[CALL] Phase B (may_reply) start: remaining_slots=%s may_agents=%s",
-                remaining, may_agents,
-            )
-
-            may_results = await asyncio.gather(
-                *[self._invoke_one(aid, group_id, "may_reply", turn) for aid in may_agents],
-                return_exceptions=True,
-            )
-
-            for agent_id, result in zip(may_agents, may_results):
-                if isinstance(result, Exception):
-                    logger.error("[CALL] Agent %s (may_reply) failed: %s", agent_id, result, exc_info=True)
-                    continue
-                output: AgentOutput = result
-                if not output.should_respond:
-                    continue
-                output = await self._process_memory_markers(output, agent_id, group_id)
-                # 保存调用日志 + 广播 turn_log 事件
-                await self._save_call_log_and_broadcast(
-                    output, agent_id, group_id, turn.turn_id
-                )
-                await self.session_manager.save_message(
-                    group_id=group_id,
-                    author_id=agent_id,
-                    content=output.content,
-                    author_type="agent",
-                    author_name=self.registry.get_agent(agent_id).name,
-                    turn_id=turn.turn_id,
-                    metadata={"next_mentions": output.next_mentions},
-                )
-                if self.ws_manager:
-                    await self.ws_manager.broadcast_message(group_id, {
-                        "type": "agent_message",
-                        "agent_id": agent_id,
-                        "content": output.content,
-                        "turn_id": turn.turn_id,
-                    })
-                all_next_mentions.update(output.next_mentions)
-                replied_agents.add(agent_id)
+            potential_may_agents = [aid for aid in turn.may_reply_agents if aid not in replied_agents]
+            
+            for agent_id in potential_may_agents:
+                if len(replied_agents) >= turn.max_responders:
+                    break
+                
+                logger.info("[CALL] Phase B (may_reply) invoke: agent=%s", agent_id)
+                try:
+                    result = await self._invoke_one(agent_id, group_id, "may_reply", turn)
+                    output: AgentOutput = result
+                    if not output.should_respond:
+                        continue
+                        
+                    output = await self._process_memory_markers(output, agent_id, group_id)
+                    await self._save_call_log_and_broadcast(output, agent_id, group_id, turn.turn_id)
+                    await self.session_manager.save_message(
+                        group_id=group_id,
+                        author_id=agent_id,
+                        content=output.content,
+                        author_type="agent",
+                        author_name=self.registry.get_agent(agent_id).name,
+                        turn_id=turn.turn_id,
+                        metadata={"next_mentions": output.next_mentions},
+                    )
+                    if self.ws_manager:
+                        await self.ws_manager.broadcast_message(group_id, {
+                            "type": "agent_message",
+                            "agent_id": agent_id,
+                            "content": output.content,
+                            "turn_id": turn.turn_id,
+                        })
+                    all_next_mentions.update(output.next_mentions)
+                    replied_agents.add(agent_id)
+                except Exception as e:
+                    logger.error("[CALL] Agent %s (may_reply) failed: %s", agent_id, e, exc_info=True)
 
         # 根据 next_mentions 与链深度决定是否再开一轮 Turn
-        if not config.re_invoke_already_replied:
-            all_next_mentions -= replied_agents
+        # 修复：不再强制减去 replied_agents。
+        # 只要有显式的 next_mentions，就应该允许在下一层 chain_depth 中继续触发，
+        # 即使该 Agent 在当前层已经回复过（这对于接龙、AB 对话至关重要）。
+        # 安全性由 chain_depth_limit 保证。
 
         if all_next_mentions and turn.chain_depth < config.chain_depth_limit:
             group = await self.session_manager.get_group(group_id)

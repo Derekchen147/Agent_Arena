@@ -218,8 +218,14 @@ class GeminiCliAdapter(BaseAdapter):
             parts.append(f"发送者: {author}")
             parts.append(f"内容:\n{current.content}\n---\n")
 
+        parts.append("## 协作与提及 (Collaboration)")
+        parts.append("如果你需要其他同事参与接龙或处理任务，请在回复的最末尾使用以下格式：")
+        parts.append("`<!--NEXT_MENTIONS:[\"agent_id_1\", \"agent_id_2\"]-->`")
+        parts.append("(注意：agent_id 必须来自上方的「当前会话成员」列表)")
+        parts.append("")
         parts.append("请根据以上信息，并结合你工作目录下的 SOUL.md 和 AGENTS.md 进行回复。")
         return "\n".join(parts)
+
 
     def _parse_output(self, raw_output: str, input: AgentInput, prompt: str = "", duration_ms: int = 0) -> AgentOutput:
         """从 CLI 输出解析。支持单个 JSON 对象或 NDJSON 格式。"""

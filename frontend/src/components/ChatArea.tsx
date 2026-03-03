@@ -145,7 +145,7 @@ export default function ChatArea({
 
   const formatTime = (ts: string): string => {
     const d = new Date(ts);
-    return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   };
 
   const markdownComponents = useMemo(() => ({
