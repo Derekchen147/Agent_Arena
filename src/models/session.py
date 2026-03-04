@@ -15,7 +15,7 @@ class GroupConfig(BaseModel):
     """群组级编排与行为配置：每回合人数上限、超时、链深度、是否启用主管等。"""
 
     max_responders: int = 5
-    turn_timeout_seconds: int = 120
+    turn_timeout_seconds: int = 300
     chain_depth_limit: int = 5
     re_invoke_already_replied: bool = False
     supervisor_enabled: bool = False

@@ -18,7 +18,7 @@ import logging
 import re
 import uuid
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from src.core.call_logger import CallLogger
 from src.models.protocol import AgentOutput
@@ -75,6 +75,7 @@ class Orchestrator:
         personal_memory: PersonalMemoryManager | None = None,
         session_summary: SessionSummaryManager | None = None,
         call_logger: CallLogger | None = None,
+        conversation_managers: dict[str, Any] | None = None,  # group_id -> ConversationManager
     ):
         self.session_manager = session_manager
         self.context_builder = context_builder
@@ -86,6 +87,55 @@ class Orchestrator:
         self.personal_memory = personal_memory
         self.session_summary = session_summary
         self.call_logger = call_logger
+        self.conversation_managers = conversation_managers or {}  # Lazy: create on demand
+
+    def _get_conversation_manager(self, agent_id: str) -> Any:
+        """为特定 Agent 获取或创建 ConversationManager。"""
+        from src.core.conversation_manager import ConversationManager
+
+        profile = self.registry.get_agent(agent_id)
+        if not profile:
+            return None
+
+        if agent_id not in self.conversation_managers:
+            self.conversation_managers[agent_id] = ConversationManager(profile.workspace_dir)
+
+        return self.conversation_managers[agent_id]
+
+    async def _save_user_message_to_conversations(self, group_id: str, message: Any) -> None:
+        """将用户消息保存到所有 Agent 的对话文件中。"""
+        for agent_id in self.registry.agents.keys():
+            try:
+                conv_mgr = self._get_conversation_manager(agent_id)
+                if conv_mgr:
+                    conv_mgr.append_message(group_id, message)
+                    logger.debug(f"Saved user message to {agent_id}'s conversations/{group_id}.md")
+            except Exception as e:
+                logger.warning(f"Failed to save message to {agent_id}'s conversations: {e}")
+
+    async def _save_agent_response_to_conversation(self, agent_id: str, group_id: str, content: str) -> None:
+        """将 Agent 的响应保存到所有 Agent 的对话文件中（所有人都能看到）。"""
+        from src.models.protocol import Message
+        from datetime import datetime
+
+        profile = self.registry.get_agent(agent_id)
+        msg = Message(
+            author_id=agent_id,
+            author_name=profile.name if profile else agent_id,
+            content=content,
+            role="assistant",
+            timestamp=datetime.now(),
+        )
+
+        # 保存到所有 Agent 的对话文件
+        for other_agent_id in self.registry.agents.keys():
+            try:
+                conv_mgr = self._get_conversation_manager(other_agent_id)
+                if conv_mgr:
+                    conv_mgr.append_message(group_id, msg)
+                    logger.debug(f"Saved agent {agent_id}'s response to {other_agent_id}'s conversations/{group_id}.md")
+            except Exception as e:
+                logger.warning(f"Failed to save agent response to {other_agent_id}'s conversations: {e}")
 
     async def on_new_message(
         self,
@@ -100,6 +150,23 @@ class Orchestrator:
             group_id, author_id, len(message_content),
             (message_content[:80] + "…") if len(message_content) > 80 else message_content,
         )
+
+        # 保存用户消息到所有 Agent 的对话文件
+        try:
+            from src.models.protocol import Message
+            from datetime import datetime
+
+            user_msg = Message(
+                author_id=author_id,
+                author_name=author_id,  # TODO: 可从前端获取
+                content=message_content,
+                role="user",
+                timestamp=datetime.now(),
+            )
+            await self._save_user_message_to_conversations(group_id, user_msg)
+        except Exception as e:
+            logger.warning(f"Failed to save user message to conversations: {e}")
+
         group = await self.session_manager.get_group(group_id)
         if not group:
             logger.error("[CALL] Group not found: group_id=%s", group_id)
@@ -176,6 +243,8 @@ class Orchestrator:
                     turn_id=turn.turn_id,
                     metadata={"next_mentions": output.next_mentions},
                 )
+                # 保存到对话文件
+                await self._save_agent_response_to_conversation(agent_id, group_id, output.content)
                 if self.ws_manager:
                     await self.ws_manager.broadcast_message(group_id, {
                         "type": "agent_message",
@@ -216,6 +285,8 @@ class Orchestrator:
                         turn_id=turn.turn_id,
                         metadata={"next_mentions": output.next_mentions},
                     )
+                    # 保存到对话文件
+                    await self._save_agent_response_to_conversation(agent_id, group_id, output.content)
                     if self.ws_manager:
                         await self.ws_manager.broadcast_message(group_id, {
                             "type": "agent_message",
@@ -352,9 +423,16 @@ class Orchestrator:
             len(agent_input.role_prompt or ""),
             "yes" if agent_input.memory_context else "no",
         )
+        # 智能选择超时时间：取全局 Turn 超时与该 Agent 自身配置超时的最大值
+        profile = self.registry.get_agent(agent_id)
+        final_timeout = turn.timeout_seconds
+        if profile and profile.cli_config.timeout > final_timeout:
+            final_timeout = profile.cli_config.timeout
+            logger.info("[CALL] Using agent-specific timeout for %s: %ss", agent_id, final_timeout)
+
         return await asyncio.wait_for(
             self.worker_runtime.invoke_agent(agent_id, agent_input),
-            timeout=turn.timeout_seconds,
+            timeout=final_timeout,
         )
 
     async def _save_call_log_and_broadcast(

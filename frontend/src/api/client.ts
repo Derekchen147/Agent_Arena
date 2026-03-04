@@ -40,9 +40,8 @@ export async function listGroups(): Promise<Group[]> {
   return data.groups;
 }
 
-export async function getGroup(groupId: string): Promise<Group> {
-  const data = await request<{ group: Group }>(`/groups/${groupId}`);
-  return data.group;
+export async function getGroup(groupId: string): Promise<{ group: Group; message_counts: Record<string, number> }> {
+  return request<{ group: Group; message_counts: Record<string, number> }>(`/groups/${groupId}`);
 }
 
 export async function createGroup(req: CreateGroupRequest): Promise<Group> {

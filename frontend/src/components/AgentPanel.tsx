@@ -8,6 +8,7 @@ interface Props {
   agents: AgentProfile[];
   group: Group | null;
   agentStatuses: AgentStatusMap;
+  messageCounts?: Record<string, number>;
   onGroupChanged: () => void;
   onAgentsChanged: () => void;
   onViewAgents?: () => void;
@@ -30,6 +31,7 @@ export default function AgentPanel({
   agents,
   group,
   agentStatuses,
+  messageCounts = {},
   onGroupChanged,
   onAgentsChanged,
   onViewAgents,
@@ -51,6 +53,11 @@ export default function AgentPanel({
 
   const groupAgents = agents.filter((a) => groupAgentIds.has(a.agent_id));
   const availableAgents = agents.filter((a) => !groupAgentIds.has(a.agent_id));
+
+  // 找出在这个群里发过言的人类或未知发送者
+  const humanStats = Object.entries(messageCounts)
+    .filter(([id]) => id === 'human' || !agents.some(a => a.agent_id === id))
+    .map(([id, count]) => ({ id, count }));
 
   const getStatus = (agentId: string) => {
     return agentStatuses[agentId]?.status ?? 'idle';
@@ -141,18 +148,24 @@ export default function AgentPanel({
         <>
           <div className="panel-section">
             <div className="section-title">群组成员</div>
-            {groupAgents.length === 0 && (
+            {groupAgents.length === 0 && humanStats.length === 0 && (
               <div className="empty-hint">暂无成员，添加员工到群组</div>
             )}
+            
+            {/* 1. Agent 成员 */}
             {groupAgents.map((agent) => {
               const status = getStatus(agent.agent_id);
               const cfg = STATUS_CONFIG[status];
               const detail = getStatusDetail(agent.agent_id);
+              const count = messageCounts[agent.agent_id] || 0;
               return (
                 <div key={agent.agent_id} className="agent-card">
                   <div className="agent-avatar">{agent.avatar || '🤖'}</div>
                   <div className="agent-info">
-                    <div className="agent-name">{agent.name}</div>
+                    <div className="agent-name-row" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div className="agent-name">{agent.name}</div>
+                      {count > 0 && <span className="message-count-badge" title="累计发言数">{count}</span>}
+                    </div>
                     <div className="agent-status" style={{ color: cfg.color }}>
                       <span className={`status-indicator ${status !== 'idle' ? 'active' : ''}`} style={{ color: cfg.color }}>
                         {cfg.icon}
@@ -178,6 +191,20 @@ export default function AgentPanel({
                 </div>
               );
             })}
+
+            {/* 2. 人类用户 */}
+            {humanStats.map((h) => (
+              <div key={h.id} className="agent-card human-member">
+                <div className="agent-avatar">🧑</div>
+                <div className="agent-info">
+                  <div className="agent-name-row" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div className="agent-name">{h.id === 'human' ? '用户' : h.id}</div>
+                    <span className="message-count-badge" title="累计发言数">{h.count}</span>
+                  </div>
+                  <div className="agent-status">在线</div>
+                </div>
+              </div>
+            ))}
           </div>
 
           {availableAgents.length > 0 && (

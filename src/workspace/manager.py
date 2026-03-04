@@ -16,7 +16,7 @@ from pathlib import Path
 
 import yaml
 
-from src.core.prompts import OPENCLAW_AGENTS_TEMPLATE, OPENCLAW_LOADING_INSTRUCTION, OPENCLAW_SOUL_TEMPLATE
+from src.core.prompts import OPENCLAW_AGENTS_TEMPLATE, OPENCLAW_LOADING_INSTRUCTION, OPENCLAW_SOUL_TEMPLATE, OPENCLAW_USER_TEMPLATE
 from src.memory.personal import PersonalMemoryManager
 from src.models.agent import AgentProfile, CliConfig, ResponseConfig
 from src.registry.agent_registry import AgentRegistry
@@ -73,10 +73,15 @@ class WorkspaceManager:
         if not agents_md.exists():
             agents_md.write_text(OPENCLAW_AGENTS_TEMPLATE, encoding="utf-8")
 
-        # 3. 写入引导文件 (CLAUDE.md, etc.)
+        # 3. 写入 USER.md
+        user_md = workspace_path / "USER.md"
+        if not user_md.exists():
+            user_md.write_text(OPENCLAW_USER_TEMPLATE, encoding="utf-8")
+
+        # 4. 写入引导文件 (CLAUDE.md, etc.)
         self._write_loading_instructions(workspace_path, cli_type)
 
-        # 4. 构造 AgentProfile
+        # 5. 构造 AgentProfile
         profile = AgentProfile(
             agent_id=agent_id,
             name=name,
@@ -91,13 +96,13 @@ class WorkspaceManager:
             cli_config=CliConfig(cli_type=cli_type),
         )
 
-        # 5. 将配置写入 {workspace}/agent.yaml
+        # 6. 将配置写入 {workspace}/agent.yaml
         self._save_agent_yaml(profile)
 
-        # 6. 注册到 AgentRegistry
+        # 7. 注册到 AgentRegistry
         self.registry.register_agent(profile)
 
-        # 7. 初始化个人记忆目录和 MEMORY.md 模板
+        # 8. 初始化个人记忆目录和 MEMORY.md 模板
         self._personal_memory.init_workspace_memory(str(workspace_path), name)
 
         logger.info(f"Onboarded agent: {agent_id} ({name}) -> {workspace_path}")

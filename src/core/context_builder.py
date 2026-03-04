@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from src.models.protocol import AgentInput, Message, Peer
 
@@ -46,6 +46,7 @@ class ContextBuilder:
         self.memory_store = memory_store
         self.personal_memory = personal_memory
         self.session_summary = session_summary
+        self.conversation_managers: dict[str, Any] = {}  # agent_id -> ConversationManager（按需创建）
 
     async def build_input(
         self,
@@ -83,12 +84,28 @@ class ContextBuilder:
                     skills=peer_profile.skills,
                 ))
 
-        # 从会话中取最近 N 条消息并转为 protocol.Message，用于对话上下文
-        messages = await self._get_truncated_history(session_id, max_messages=50)
+        # 从会话中取最近 5 条消息并转为 protocol.Message，用于对话上下文
+        messages = await self._get_truncated_history(session_id, max_messages=5)
         logger.info(
-            "[CALL] context_builder: fetched history messages_count=%s peers_count=%s",
+            "[CALL] context_builder: fetched recent messages_count=%s peers_count=%s",
             len(messages), len(peers),
         )
+
+        # 生成早期对话摘要
+        conversation_summary = ""
+        try:
+            # 如果还没有该 agent 的 ConversationManager，就创建一个
+            if agent_id not in self.conversation_managers and profile and profile.workspace_dir:
+                from src.core.conversation_manager import ConversationManager
+                self.conversation_managers[agent_id] = ConversationManager(profile.workspace_dir)
+
+            # 现在生成摘要
+            if agent_id in self.conversation_managers:
+                conversation_summary = self.conversation_managers[agent_id].generate_summary(session_id)
+                if conversation_summary:
+                    logger.debug(f"Generated conversation summary for {agent_id}: {len(conversation_summary)} chars")
+        except Exception as e:
+            logger.warning(f"Failed to generate conversation summary for {agent_id}: {e}")
 
         # 多层记忆上下文组装
         memory_context = await self._build_memory_context(
@@ -111,6 +128,7 @@ class ContextBuilder:
             invocation=invocation,
             mentioned_by=mentioned_by,
             messages=messages,
+            conversation_summary=conversation_summary,
             peers=peers,
             memory_context=memory_context,
             max_output_tokens=profile.max_output_tokens,

@@ -83,6 +83,7 @@ class AgentInput(BaseModel):
     mentioned_by: str | None = None
 
     messages: list[Message] = Field(default_factory=list)
+    conversation_summary: str = ""  # 早期对话摘要（长度受控）
     peers: list[Peer] = Field(default_factory=list)
     memory_context: str | None = None
 

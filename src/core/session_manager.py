@@ -178,6 +178,15 @@ class SessionManager:
             for row in rows
         ]
 
+    async def get_group_message_counts(self, group_id: str) -> dict[str, int]:
+        """统计群组内每个发送者的消息总数。返回 {author_id: count}。"""
+        cursor = await self._db.execute(
+            "SELECT author_id, COUNT(*) as count FROM messages WHERE group_id = ? GROUP BY author_id",
+            (group_id,)
+        )
+        rows = await cursor.fetchall()
+        return {row["author_id"]: row["count"] for row in rows}
+
     # ── 消息存储 ──
 
     async def save_message(

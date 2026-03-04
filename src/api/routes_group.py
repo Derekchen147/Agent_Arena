@@ -53,12 +53,20 @@ async def create_group(req: CreateGroupRequest):
 
 @router.get("/{group_id}")
 async def get_group(group_id: str):
-    """获取群组详情。"""
+    """获取特定群组详情，附带成员列表与消息统计。"""
     from src.main import app_state
     group = await app_state.session_manager.get_group(group_id)
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
-    return {"group": group.model_dump(mode="json")}
+
+    # 获取消息统计
+    counts = await app_state.session_manager.get_group_message_counts(group_id)
+
+    return {
+        "group": group.model_dump(mode="json"),
+        "message_counts": counts
+    }
+
 
 
 @router.delete("/{group_id}")

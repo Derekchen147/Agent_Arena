@@ -33,7 +33,16 @@ class PersonalMemoryManager:
         # ── 精华长期记忆 ──
         memory_md = ws / "MEMORY.md"
         if memory_md.exists():
-            text = memory_md.read_text(encoding="utf-8").strip()
+            try:
+                # 使用 utf-8-sig 处理可能的 BOM
+                text = memory_md.read_text(encoding="utf-8-sig").strip()
+            except (UnicodeDecodeError, Exception):
+                # 降级到 latin-1（总能读取，但可能乱码）
+                try:
+                    text = memory_md.read_text(encoding="latin-1").strip()
+                except Exception as e:
+                    logger.warning(f"Failed to read MEMORY.md: {e}")
+                    text = ""
             if text:
                 if len(text) > _MEMORY_MD_MAX_CHARS:
                     text = text[:_MEMORY_MD_MAX_CHARS] + "\n...(截断)"
@@ -45,7 +54,16 @@ class PersonalMemoryManager:
         for date_str in [today, yesterday]:
             log_file = ws / "memory" / f"{date_str}.md"
             if log_file.exists():
-                text = log_file.read_text(encoding="utf-8").strip()
+                try:
+                    # 使用 utf-8-sig 处理可能的 BOM
+                    text = log_file.read_text(encoding="utf-8-sig").strip()
+                except (UnicodeDecodeError, Exception):
+                    # 降级到 latin-1
+                    try:
+                        text = log_file.read_text(encoding="latin-1").strip()
+                    except Exception as e:
+                        logger.warning(f"Failed to read {date_str}.md: {e}")
+                        text = ""
                 if text:
                     if len(text) > _DAILY_LOG_MAX_CHARS:
                         text = text[:_DAILY_LOG_MAX_CHARS] + "\n...(截断)"

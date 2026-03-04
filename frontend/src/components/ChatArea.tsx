@@ -36,11 +36,21 @@ export default function ChatArea({
 
   // Load message history when group changes
   useEffect(() => {
-    if (!group || loadedRef.current === group.id) return;
+    if (!group) return;
+    if (loadedRef.current === group.id) return;
+    
+    let isSubscribed = true;
     loadedRef.current = group.id;
+
     getMessages(group.id).then((msgs) => {
-      setMessages(msgs);
+      if (isSubscribed) {
+        setMessages(msgs);
+      }
     });
+
+    return () => {
+      isSubscribed = false;
+    };
   }, [group, setMessages]);
 
   // Auto scroll to bottom on new messages

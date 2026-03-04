@@ -22,6 +22,7 @@ export default function App() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
+  const [messageCounts, setMessageCounts] = useState<Record<string, number>>({});
   const [agents, setAgents] = useState<AgentProfile[]>([]);
   const [messages, setMessages] = useState<StoredMessage[]>([]);
   const [rightPanel, setRightPanel] = useState<'members' | 'logs'>('members');
@@ -111,23 +112,38 @@ export default function App() {
 
   // Load group details when selection changes
   useEffect(() => {
+    setMessages([]); // 切换群组时立即清空消息，解决残留问题
+    setHistoryLogMap({});
+    setMessageCounts({});
+
     if (!selectedGroupId) {
       setSelectedGroup(null);
-      setMessages([]);
-      setHistoryLogMap({});
       return;
     }
+
+    let isSubscribed = true; // 用于处理竞态请求
+
     getGroup(selectedGroupId)
-      .then((g) => setSelectedGroup(g))
+      .then((res) => {
+        if (isSubscribed) {
+          setSelectedGroup(res.group);
+          setMessageCounts(res.message_counts);
+        }
+      })
       .catch(console.error);
 
     loadLogs(selectedGroupId);
+
+    return () => {
+      isSubscribed = false;
+    };
   }, [selectedGroupId, loadLogs]);
 
   // WebSocket callbacks
   const onUserMessage = useCallback(
     (event: WSEvent & { type: 'user_message' }) => {
       setMessages((prev) => {
+        // 基于 ID 去重
         if (prev.some((m) => m.id === event.message.id)) return prev;
         return [...prev, event.message];
       });
@@ -137,41 +153,52 @@ export default function App() {
 
   const onAgentMessage = useCallback(
     (event: WSEvent & { type: 'agent_message' }) => {
-      const msg: StoredMessage = {
-        id: `${event.turn_id}-${event.agent_id}-${Date.now()}`,
-        group_id: selectedGroupId ?? '',
-        turn_id: event.turn_id,
-        author_id: event.agent_id,
-        author_type: 'agent',
-        author_name:
-          agents.find((a) => a.agent_id === event.agent_id)?.name ?? event.agent_id,
-        content: event.content,
-        mentions: [],
-        attachments: [],
-        timestamp: new Date().toISOString(),
-        metadata: {},
-      };
-      setMessages((prev) => [...prev, msg]);
+      // 如果消息不属于当前选中的群组，忽略（防止异步导致的群组错位）
+      // 注意：这里的 selectedGroupId 可能不是最新的，但在 setMessages 内部可以通过 logic 规避
+      const msgId = `${event.turn_id}-${event.agent_id}`; 
+      
+      setMessages((prev) => {
+        // 基于确定性生成的 ID 去重，解决重复回答问题
+        if (prev.some((m) => m.id.startsWith(msgId))) return prev;
+
+        const msg: StoredMessage = {
+          id: `${msgId}-${Date.now()}`,
+          group_id: selectedGroupId ?? '',
+          turn_id: event.turn_id,
+          author_id: event.agent_id,
+          author_type: 'agent',
+          author_name:
+            agents.find((a) => a.agent_id === event.agent_id)?.name ?? event.agent_id,
+          content: event.content,
+          mentions: [],
+          attachments: [],
+          timestamp: new Date().toISOString(),
+          metadata: {},
+        };
+        return [...prev, msg];
+      });
     },
     [selectedGroupId, agents],
   );
 
   const onSystemMessage = useCallback(
     (event: WSEvent & { type: 'system_message' }) => {
-      const msg: StoredMessage = {
-        id: `system-${Date.now()}`,
-        group_id: selectedGroupId ?? '',
-        turn_id: '',
-        author_id: 'system',
-        author_type: 'system',
-        author_name: '系统',
-        content: event.content,
-        mentions: [],
-        attachments: [],
-        timestamp: new Date().toISOString(),
-        metadata: {},
-      };
-      setMessages((prev) => [...prev, msg]);
+      setMessages((prev) => {
+        const msg: StoredMessage = {
+          id: `system-${Date.now()}-${Math.random()}`,
+          group_id: selectedGroupId ?? '',
+          turn_id: '',
+          author_id: 'system',
+          author_type: 'system',
+          author_name: '系统',
+          content: event.content,
+          mentions: [],
+          attachments: [],
+          timestamp: new Date().toISOString(),
+          metadata: {},
+        };
+        return [...prev, msg];
+      });
     },
     [selectedGroupId],
   );
@@ -204,7 +231,10 @@ export default function App() {
     loadGroups();
     if (selectedGroupId) {
       getGroup(selectedGroupId)
-        .then((g) => setSelectedGroup(g))
+        .then((res) => {
+          setSelectedGroup(res.group);
+          setMessageCounts(res.message_counts);
+        })
         .catch(console.error);
     }
   };

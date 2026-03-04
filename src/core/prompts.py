@@ -100,6 +100,42 @@ skills/
 You can create new skills by adding a directory under `skills/` with a `SKILL.md` file.
 """
 
+OPENCLAW_USER_TEMPLATE = """# USER.md - About Your Human
+
+_This is who you're helping. Read this first._
+
+## Who They Are
+
+[Add context about the user here]
+
+- Name:
+- Role/Title:
+- Key interests:
+- Communication style:
+
+## How They Like To Work
+
+[Add preferences about how the user likes to be helped]
+
+- Prefers detailed explanations or concise answers?
+- Want lots of examples?
+- Like structured checklists or narrative flows?
+- Any particular tone/voice they prefer?
+
+## Important Context
+
+[Add anything specific the user wants you to know]
+
+- Current projects:
+- Pain points:
+- Values/goals:
+- Things to avoid:
+
+---
+
+**This file is for you to understand who you're working with. Update it as you learn more about the user.**
+"""
+
 OPENCLAW_LOADING_INSTRUCTION = """# OpenClaw Persona & Memory System
 
 Before doing anything else:

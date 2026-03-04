@@ -219,59 +219,9 @@ class CursorCliAdapter(BaseAdapter):
     def _build_prompt(self, input: AgentInput) -> str:
         """将 AgentInput 转为发给 Cursor CLI 的 prompt。
 
-        结构：
-        1. 当前会话成员 — 让 Agent 知道自己是谁、群里有哪些同事可协作
-        2. 对话记录     — 历史消息（只读上下文）
-        3. 记忆注入     — 如果有相关记忆片段
-        4. 当前待回复消息 — 最后一条
+        使用基类的 _build_context_prompt 方法构造动态上下文部分。
         """
-        parts: list[str] = []
-
-        # ── 1. 当前会话成员 ──
-        agent_label = f"「{input.agent_name}」({input.agent_id})" if input.agent_name else f"({input.agent_id})"
-        parts.append(f"## 当前会话成员\n你是{agent_label}。")
-        if input.peers:
-            parts.append("以下是本群的其他成员：")
-            for p in input.peers:
-                skills = ", ".join(p.skills) if p.skills else "无"
-                parts.append(f"- {p.name} ({p.agent_id}) — 技能: {skills}")
-        parts.append("")
-
-        # ── 2. 对话记录 ──
-        if input.messages and len(input.messages) > 1:
-            history = input.messages[:-1]
-            parts.append("## 对话记录（只读上下文，不要重复回复这些消息）")
-            for msg in history:
-                author = msg.author_name or msg.role
-                parts.append(f"[{author}]: {msg.content}")
-            parts.append("")
-
-        # ── 3. 技能注入 ──
-        if self.skill_definitions:
-            from src.skills.loader import build_skills_prompt_section
-            skills_section = build_skills_prompt_section(self.skill_definitions)
-            if skills_section:
-                parts.append(skills_section)
-
-        # ── 4. 记忆注入 ──
-        if input.memory_context:
-            parts.append(f"## 相关记忆\n{input.memory_context}\n")
-
-        # ── 5. 当前待回复消息 ──
-        if input.messages:
-            current = input.messages[-1]
-            author = current.author_name or current.role
-            parts.append("---\n## 当前待回复消息")
-            parts.append(f"发送者: {author}")
-            parts.append(f"内容:\n{current.content}\n---\n")
-
-        parts.append("## 协作与提及 (Collaboration)")
-        parts.append("如果你需要其他同事参与接龙或处理任务，请在回复的最末尾使用以下格式：")
-        parts.append("`<!--NEXT_MENTIONS:[\"agent_id_1\", \"agent_id_2\"]-->`")
-        parts.append("(注意：agent_id 必须来自上方的「当前会话成员」列表)")
-        parts.append("")
-        parts.append("请根据以上信息，并结合你工作目录下的 SOUL.md 和 AGENTS.md 进行回复。")
-        return "\n".join(parts)
+        return self._build_context_prompt(input)
 
     def _parse_output(self, raw_output: str, input: AgentInput, prompt: str = "", duration_ms: int = 0) -> AgentOutput:
         """从 CLI 输出解析：优先 JSON 的 result/content，再处理 SKIP 与 NEXT_MENTIONS。"""
