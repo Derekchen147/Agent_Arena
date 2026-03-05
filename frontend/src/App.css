@@ -180,3 +180,14 @@
   background: #666;
   cursor: not-allowed;
 }
+
+.confirm-modal {
+  width: 360px;
+}
+
+.confirm-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+}

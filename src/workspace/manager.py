@@ -109,14 +109,23 @@ class WorkspaceManager:
         return profile
 
     async def remove_agent(self, agent_id: str, delete_workspace: bool = False) -> None:
-        """从注册表注销，并可选的删除工作目录。"""
+        """从注册表注销，并将工作目录移入 trash（软删除）。"""
         self.registry.unregister_agent(agent_id)
 
-        if delete_workspace:
-            workspace_path = self.workspaces_dir / agent_id
-            if workspace_path.exists():
+        workspace_path = self.workspaces_dir / agent_id
+        if workspace_path.exists():
+            if delete_workspace:
                 shutil.rmtree(workspace_path)
-                logger.info(f"Deleted workspace: {workspace_path}")
+                logger.info(f"Permanently deleted workspace: {workspace_path}")
+            else:
+                trash_dir = self.workspaces_dir / "trash"
+                trash_dir.mkdir(parents=True, exist_ok=True)
+                dest = trash_dir / agent_id
+                # 如果 trash 里已有同名目录，先清除
+                if dest.exists():
+                    shutil.rmtree(dest)
+                shutil.move(str(workspace_path), str(dest))
+                logger.info(f"Moved workspace to trash: {workspace_path} -> {dest}")
 
         logger.info(f"Removed agent: {agent_id}")
 

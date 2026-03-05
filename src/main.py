@@ -10,9 +10,12 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import sys
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from datetime import datetime
+from logging.handlers import RotatingFileHandler
 
 # Windows 上默认的 SelectorEventLoop 不支持 create_subprocess_exec，必须用 ProactorEventLoop
 if sys.platform == "win32":
@@ -40,8 +43,23 @@ from src.worker.runtime import WorkerRuntime
 from src.workspace.manager import WorkspaceManager
 
 # 配置根日志格式，便于排查问题
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
+_LOG_FORMAT = "%(asctime)s [%(name)s] %(levelname)s: %(message)s"
+logging.basicConfig(level=logging.INFO, format=_LOG_FORMAT)
+
+# 同时写到文件，防止 terminal 报错丢失
+os.makedirs("data/logs", exist_ok=True)
+_log_date = datetime.now().strftime("%Y-%m-%d")
+_file_handler = RotatingFileHandler(
+    f"data/logs/server_{_log_date}.log",
+    maxBytes=10 * 1024 * 1024,  # 10 MB 自动滚动
+    backupCount=7,
+    encoding="utf-8",
+)
+_file_handler.setFormatter(logging.Formatter(_LOG_FORMAT))
+logging.getLogger().addHandler(_file_handler)
+
 logger = logging.getLogger(__name__)
+logger.info("Server log file: data/logs/server_%s.log", _log_date)
 
 
 @dataclass

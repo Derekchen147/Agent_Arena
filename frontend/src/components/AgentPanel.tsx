@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { AgentProfile, Group, AgentStatus } from '../types';
 import type { AgentStatusMap } from '../hooks/useWebSocket';
 import { addMember, removeMember, onboardAgent, deleteAgent } from '../api/client';
+import ConfirmModal from './ConfirmModal';
 import './AgentPanel.css';
 
 interface Props {
@@ -46,6 +47,7 @@ export default function AgentPanel({
     cli_type: 'claude',
   });
   const [onboarding, setOnboarding] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
   const groupAgentIds = new Set(
     group?.members.filter((m) => m.type === 'agent').map((m) => m.agent_id) ?? [],
@@ -118,8 +120,10 @@ export default function AgentPanel({
     }
   };
 
-  const handleDeleteAgent = async (agentId: string) => {
-    if (!confirm(`确定删除员工 ${agentId}?`)) return;
+  const handleDeleteAgent = async () => {
+    if (!deleteTargetId) return;
+    const agentId = deleteTargetId;
+    setDeleteTargetId(null);
     try {
       await deleteAgent(agentId);
       onAgentsChanged();
@@ -250,7 +254,7 @@ export default function AgentPanel({
               </div>
               <button
                 className="btn-small btn-remove"
-                onClick={() => handleDeleteAgent(agent.agent_id)}
+                onClick={() => setDeleteTargetId(agent.agent_id)}
                 title="删除员工"
               >
                 &times;
@@ -312,6 +316,15 @@ export default function AgentPanel({
             </div>
           </div>
         </div>
+      )}
+      {deleteTargetId && (
+        <ConfirmModal
+          title="删除员工"
+          message={`确定要删除「${agents.find(a => a.agent_id === deleteTargetId)?.name || deleteTargetId}」？工作区将移入回收站，可手动恢复。`}
+          confirmLabel="确认删除"
+          onConfirm={handleDeleteAgent}
+          onCancel={() => setDeleteTargetId(null)}
+        />
       )}
     </div>
   );

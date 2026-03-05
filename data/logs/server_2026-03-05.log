@@ -1,0 +1,20 @@
+2026-03-05 19:54:45,178 [src.main] INFO: Server log file: data/logs/server_2026-03-05.log
+2026-03-05 19:54:45,197 [src.main] INFO: Starting Agent Arena...
+2026-03-05 19:54:45,203 [src.auth.service] INFO: [AuthService] 未找到保存的用户信息
+2026-03-05 19:54:45,210 [src.registry.agent_registry] INFO: Loaded agent from workspace: columbo (Columbo)
+2026-03-05 19:54:45,212 [src.registry.agent_registry] INFO: Loaded agent from workspace: Cursor_A (Monica)
+2026-03-05 19:54:45,215 [src.registry.agent_registry] INFO: Loaded agent from workspace: hermione_granger (Hermione Granger)
+2026-03-05 19:54:45,217 [src.registry.agent_registry] INFO: Loaded agent from workspace: sherlock_holmes (Sherlock Holmes)
+2026-03-05 19:54:45,219 [src.registry.agent_registry] INFO: Loaded agent from workspace: tony_stark (Tony Stark)
+2026-03-05 19:54:45,220 [src.main] INFO: Agent Arena started. 5 agents loaded.
+2026-03-05 19:54:46,717 [src.api.websocket] INFO: WebSocket connected to group 56a2050c-07a1-4ded-8edc-9dda8db97805
+2026-03-05 19:54:46,748 [src.api.websocket] INFO: WebSocket connected to group 56a2050c-07a1-4ded-8edc-9dda8db97805
+2026-03-05 19:54:46,763 [src.api.websocket] INFO: WebSocket connected to group 56a2050c-07a1-4ded-8edc-9dda8db97805
+2026-03-05 19:54:46,778 [src.api.websocket] INFO: WebSocket connected to group 56a2050c-07a1-4ded-8edc-9dda8db97805
+2026-03-05 19:54:50,622 [src.api.websocket] INFO: WebSocket disconnected from group 56a2050c-07a1-4ded-8edc-9dda8db97805
+2026-03-05 19:54:50,624 [src.api.websocket] INFO: WebSocket disconnected from group 56a2050c-07a1-4ded-8edc-9dda8db97805
+2026-03-05 19:54:50,624 [src.api.websocket] INFO: WebSocket disconnected from group 56a2050c-07a1-4ded-8edc-9dda8db97805
+2026-03-05 19:54:50,624 [src.api.websocket] INFO: WebSocket disconnected from group 56a2050c-07a1-4ded-8edc-9dda8db97805
+2026-03-05 19:54:52,533 [src.api.websocket] INFO: WebSocket connected to group 56a2050c-07a1-4ded-8edc-9dda8db97805
+2026-03-05 21:55:31,366 [src.api.websocket] INFO: WebSocket disconnected from group 56a2050c-07a1-4ded-8edc-9dda8db97805
+2026-03-05 23:36:51,800 [src.api.websocket] INFO: WebSocket connected to group 56a2050c-07a1-4ded-8edc-9dda8db97805

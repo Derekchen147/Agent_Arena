@@ -34,7 +34,10 @@ class AgentRegistry:
         for subdir in workspaces_path.iterdir():
             if not subdir.is_dir():
                 continue
-            
+            # 跳过软删除的 trash 目录
+            if subdir.name == "trash":
+                continue
+
             agent_yaml = subdir / "agent.yaml"
             if not agent_yaml.exists():
                 continue

@@ -256,6 +256,24 @@ class Orchestrator:
                 replied_agents.add(agent_id)
             except Exception as e:
                 logger.error("[CALL] Agent %s failed: %s", agent_id, e, exc_info=True)
+                await self._save_error_log(agent_id, group_id, turn.turn_id, str(e))
+                # 广播错误通知，避免用户误以为系统正常运行
+                profile = self.registry.get_agent(agent_id)
+                agent_name = profile.name if profile else agent_id
+                error_content = f"⚠️ [{agent_name}] 调用失败：{str(e)}"
+                if self.ws_manager:
+                    await self.ws_manager.broadcast_message(group_id, {
+                        "type": "system_message",
+                        "content": error_content,
+                    })
+                await self.session_manager.save_message(
+                    group_id=group_id,
+                    author_id="system",
+                    content=error_content,
+                    author_type="system",
+                    author_name="System",
+                    turn_id=turn.turn_id,
+                )
 
         # Phase B：may_reply（可选）
         # 同样改为串行，避免多人同时抢答导致的上下文错乱
@@ -298,6 +316,23 @@ class Orchestrator:
                     replied_agents.add(agent_id)
                 except Exception as e:
                     logger.error("[CALL] Agent %s (may_reply) failed: %s", agent_id, e, exc_info=True)
+                    await self._save_error_log(agent_id, group_id, turn.turn_id, str(e))
+                    profile = self.registry.get_agent(agent_id)
+                    agent_name = profile.name if profile else agent_id
+                    error_content = f"⚠️ [{agent_name}] 调用失败：{str(e)}"
+                    if self.ws_manager:
+                        await self.ws_manager.broadcast_message(group_id, {
+                            "type": "system_message",
+                            "content": error_content,
+                        })
+                    await self.session_manager.save_message(
+                        group_id=group_id,
+                        author_id="system",
+                        content=error_content,
+                        author_type="system",
+                        author_name="System",
+                        turn_id=turn.turn_id,
+                    )
 
         # 根据 next_mentions 与链深度决定是否再开一轮 Turn
         # 修复：不再强制减去 replied_agents。
@@ -306,20 +341,28 @@ class Orchestrator:
         # 安全性由 chain_depth_limit 保证。
 
         if all_next_mentions and turn.chain_depth < config.chain_depth_limit:
-            group = await self.session_manager.get_group(group_id)
-            agent_members = [m.agent_id for m in group.members if m.type == "agent" and m.agent_id]
-            remaining_agents = [a for a in agent_members if a not in all_next_mentions and a not in replied_agents]
+            # 使用初始快照成员列表，不重拉 DB，防止竞态条件引入新加入的成员
+            agent_members = turn.group_agent_ids
+            # 过滤：只触发实际在群里的成员，防止 next_mentions 触发非群成员
+            valid_next_mentions = [a for a in all_next_mentions if a in agent_members]
+            remaining_agents = [a for a in agent_members if a not in valid_next_mentions and a not in replied_agents]
 
-            next_turn = Turn(
-                trigger_source="system",
-                must_reply_agents=list(all_next_mentions),
-                may_reply_agents=remaining_agents,
-                group_agent_ids=agent_members,
-                max_responders=config.max_responders,
-                timeout_seconds=config.turn_timeout_seconds,
-                chain_depth=turn.chain_depth + 1,
-            )
-            await self.execute_turn(next_turn, group_id, config)
+            if not valid_next_mentions:
+                logger.warning("[CALL] next_mentions %s 全部不在群成员列表中，跳过链式触发", all_next_mentions)
+            else:
+                if len(valid_next_mentions) < len(all_next_mentions):
+                    skipped = [a for a in all_next_mentions if a not in agent_members]
+                    logger.warning("[CALL] next_mentions 过滤掉非群成员: %s", skipped)
+                next_turn = Turn(
+                    trigger_source="system",
+                    must_reply_agents=valid_next_mentions,
+                    may_reply_agents=remaining_agents,
+                    group_agent_ids=agent_members,
+                    max_responders=config.max_responders,
+                    timeout_seconds=config.turn_timeout_seconds,
+                    chain_depth=turn.chain_depth + 1,
+                )
+                await self.execute_turn(next_turn, group_id, config)
         elif turn.chain_depth >= config.chain_depth_limit:
             if self.ws_manager:
                 await self.ws_manager.broadcast_message(group_id, {
@@ -485,6 +528,24 @@ class Orchestrator:
                 "tool_count": len(meta.tool_calls),
                 "is_error": meta.is_error,
             })
+
+    async def _save_error_log(self, agent_id: str, group_id: str, turn_id: str, error_msg: str) -> None:
+        """当 Agent 调用抛出异常时，向 JSONL 写入一条 is_error=True 的占位记录。"""
+        from src.core.call_logger import CallLog
+        if not self.call_logger:
+            return
+        profile = self.registry.get_agent(agent_id)
+        log = CallLog(
+            log_id=f"{turn_id}-{agent_id}-err",
+            session_id=group_id,
+            turn_id=turn_id,
+            agent_id=agent_id,
+            agent_name=profile.name if profile else agent_id,
+            raw_output_preview=error_msg,
+            content_preview="[AGENT_ERROR]",
+            is_error=True,
+        )
+        self.call_logger.save(log)
 
     def _parse_mentions(self, content: str, agent_ids: list[str]) -> list[str]:
         """从消息正文解析 @xxx：支持 @all/@所有人、agent_id 或 agent 名称匹配。

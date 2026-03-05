@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { AgentProfile, UpdateAgentRequest, SkillDefinition, McpServerConfig, McpReadiness } from '../types';
+import ConfirmModal from './ConfirmModal';
 import {
   updateAgent,
   onboardAgent,
@@ -123,6 +124,7 @@ export default function AgentManagement({ agents, onAgentsChanged, onBack }: Pro
   const [newSkill, setNewSkill] = useState({ skill_id: '', name: '', description: '', body: '' });
   const [showAddMcp, setShowAddMcp] = useState(false);
   const [newMcp, setNewMcp] = useState({ server_id: '', server_type: 'external', command: '', args: '', required_env: '', capability: '' });
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Load agent details
   const loadAgent = useCallback(
@@ -255,15 +257,14 @@ export default function AgentManagement({ agents, onAgentsChanged, onBack }: Pro
 
   const handleDelete = async () => {
     if (!selectedAgentId) return;
-    if (!confirm(`确定删除员工「${form.name || selectedAgentId}」？此操作不可撤销。`)) return;
-
+    setShowDeleteConfirm(false);
     try {
       await deleteAgent(selectedAgentId);
       onAgentsChanged();
       setSelectedAgentId(null);
       setMode('edit');
       setForm(EMPTY_FORM);
-      setStatusMsg({ type: 'success', text: '已删除' });
+      setStatusMsg({ type: 'success', text: '已移入回收站' });
     } catch (err) {
       setStatusMsg({ type: 'error', text: `删除失败: ${err}` });
     }
@@ -400,6 +401,17 @@ export default function AgentManagement({ agents, onAgentsChanged, onBack }: Pro
         </button>
       </div>
 
+      {showDeleteConfirm && (
+        <ConfirmModal
+          title="移入回收站"
+          message={`确定要将「${form.name || selectedAgentId}」移入回收站？工作目录将被保留，可从 workspaces/trash 恢复。`}
+          confirmLabel="移入回收站"
+          cancelLabel="取消"
+          onConfirm={handleDelete}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
+      )}
+
       {/* Right: Edit Form */}
       {!showEditor ? (
         <div className="am-empty">选择一个员工查看详情，或点击「新建员工」</div>
@@ -411,7 +423,7 @@ export default function AgentManagement({ agents, onAgentsChanged, onBack }: Pro
             </h2>
             <div className="am-edit-actions">
               {mode === 'edit' && (
-                <button className="am-btn am-btn-danger" onClick={handleDelete}>
+                <button className="am-btn am-btn-danger" onClick={() => setShowDeleteConfirm(true)}>
                   删除
                 </button>
               )}
