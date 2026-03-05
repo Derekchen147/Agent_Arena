@@ -103,9 +103,12 @@ class CursorCliAdapter(BaseAdapter):
 
         def _run_cmd() -> subprocess.CompletedProcess:
             # 通过 stdin 管道传递 prompt，避免 shell 转义和命令行长度限制
+            # 非交互调用必须信任工作目录，否则会报 Workspace Trust Required
             cmd = [
                 self.command,
                 "--output-format", "json",
+                "--trust",
+                "--yolo",
                 *self.extra_args,
             ]
             logger.info("[CALL] cursor_cli cmd: %s (stdin prompt_len=%d)", cmd, len(prompt_bytes))
@@ -193,7 +196,7 @@ class CursorCliAdapter(BaseAdapter):
 
         def _run_ok() -> subprocess.CompletedProcess:
             return subprocess.run(
-                [self.command, "--output-format", "json"],
+                [self.command, "--output-format", "json", "--trust", "--yolo"],
                 input=b"ok",
                 env=run_env,
                 capture_output=True,
@@ -224,13 +227,15 @@ class CursorCliAdapter(BaseAdapter):
         return self._build_context_prompt(input)
 
     def _parse_output(self, raw_output: str, input: AgentInput, prompt: str = "", duration_ms: int = 0) -> AgentOutput:
-        """从 CLI 输出解析：优先 JSON 的 result/content，再处理 SKIP 与 NEXT_MENTIONS。"""
+        """从 CLI 输出解析：优先 JSON 的 result/content，再处理 SKIP 与 NEXT_MENTIONS；从 usage 提取 token 统计。"""
         content = raw_output
+        usage_data: dict = {}
 
         try:
             data = json.loads(raw_output)
             if isinstance(data, dict):
                 content = data.get("result", data.get("content", raw_output))
+                usage_data = data.get("usage") or {}
             elif isinstance(data, list):
                 text_parts = [
                     block.get("text", "")
@@ -255,7 +260,23 @@ class CursorCliAdapter(BaseAdapter):
                 pass
             content = re.sub(r"<!--NEXT_MENTIONS:\[.*?\]-->", "", content).strip()
 
-        meta = ExecutionMeta(duration_ms=duration_ms)
+        # Cursor CLI 返回 usage: { inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens }（camelCase）
+        input_tokens = (
+            usage_data.get("inputTokens", 0)
+            + usage_data.get("cacheReadTokens", 0)
+        )
+        output_tokens = usage_data.get("outputTokens", 0)
+        meta = ExecutionMeta(
+            duration_ms=duration_ms,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+        )
+        if usage_data and (input_tokens or output_tokens):
+            logger.info(
+                "[CALL] cursor_cli usage: input_tokens=%d output_tokens=%d",
+                input_tokens,
+                output_tokens,
+            )
         logger.info("[CALL] cursor_cli parsed content =====> %s", content[:1000])
         return AgentOutput(
             content=content,
