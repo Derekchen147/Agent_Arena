@@ -18,3 +18,5 @@
 2026-03-05 19:54:52,533 [src.api.websocket] INFO: WebSocket connected to group 56a2050c-07a1-4ded-8edc-9dda8db97805
 2026-03-05 21:55:31,366 [src.api.websocket] INFO: WebSocket disconnected from group 56a2050c-07a1-4ded-8edc-9dda8db97805
 2026-03-05 23:36:51,800 [src.api.websocket] INFO: WebSocket connected to group 56a2050c-07a1-4ded-8edc-9dda8db97805
+2026-03-06 00:50:01,690 [src.api.websocket] INFO: WebSocket disconnected from group 56a2050c-07a1-4ded-8edc-9dda8db97805
+2026-03-06 00:50:03,135 [src.main] INFO: Shutting down Agent Arena...

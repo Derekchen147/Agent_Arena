@@ -1,0 +1,81 @@
+2026-03-06 00:50:06,151 [src.main] INFO: Server log file: data/logs/server_2026-03-06.log
+2026-03-06 00:50:06,169 [src.main] INFO: Starting Agent Arena...
+2026-03-06 00:50:06,176 [src.auth.service] INFO: [AuthService] 未找到保存的用户信息
+2026-03-06 00:50:06,200 [src.registry.agent_registry] INFO: Loaded agent from workspace: columbo (Columbo)
+2026-03-06 00:50:06,217 [src.registry.agent_registry] INFO: Loaded agent from workspace: Cursor_A (Monica)
+2026-03-06 00:50:06,235 [src.registry.agent_registry] INFO: Loaded agent from workspace: hermione_granger (Hermione Granger)
+2026-03-06 00:50:06,252 [src.registry.agent_registry] INFO: Loaded agent from workspace: sherlock_holmes (Sherlock Holmes)
+2026-03-06 00:50:06,268 [src.registry.agent_registry] INFO: Loaded agent from workspace: tony_stark (Tony Stark)
+2026-03-06 00:50:06,269 [src.main] INFO: Agent Arena started. 5 agents loaded.
+2026-03-06 00:50:11,699 [src.api.websocket] INFO: WebSocket connected to group 56a2050c-07a1-4ded-8edc-9dda8db97805
+2026-03-06 00:50:13,396 [src.api.websocket] INFO: WebSocket disconnected from group 56a2050c-07a1-4ded-8edc-9dda8db97805
+2026-03-06 00:50:15,317 [src.api.websocket] INFO: WebSocket connected to group a411a4f8-220c-4f0b-bfd4-e662b215dfa9
+2026-03-06 00:50:25,294 [src.api.routes_message] INFO: [CALL] API send_message: group_id=a411a4f8-220c-4f0b-bfd4-e662b215dfa9 author_id=human content_len=19 mentions=['Cursor_A']
+2026-03-06 00:50:25,300 [src.api.routes_message] INFO: [CALL] API send_message: triggering orchestrator.on_new_message (async)
+2026-03-06 00:50:25,301 [src.core.orchestrator] INFO: [CALL] on_new_message: group_id=a411a4f8-220c-4f0b-bfd4-e662b215dfa9 author_id=human content_len=19 content_preview=@Monica 你现在使用的是什么模型
+2026-03-06 00:50:25,310 [src.core.orchestrator] INFO: [CALL] Group resolved: agent_members=['architect', 'developer', 'Cursor_A']
+2026-03-06 00:50:25,310 [src.core.orchestrator] INFO: [CALL] Mention resolution: frontend_mentions=['Cursor_A'] parsed_mentions=['Cursor_A']
+2026-03-06 00:50:25,310 [src.core.orchestrator] INFO: [CALL] Explicit @mentions → must_reply=['Cursor_A']
+2026-03-06 00:50:25,311 [src.core.orchestrator] INFO: [CALL] Turn created: turn_id=3d4cca9f-043e-4bac-9612-1427966be935 trigger_source=human must_reply_agents=['Cursor_A'] max_responders=5
+2026-03-06 00:50:25,311 [src.core.orchestrator] INFO: [CALL] execute_turn: turn_id=3d4cca9f-043e-4bac-9612-1427966be935 group_id=a411a4f8-220c-4f0b-bfd4-e662b215dfa9 chain_depth=0 must_reply=['Cursor_A']
+2026-03-06 00:50:25,311 [src.core.orchestrator] INFO: [CALL] Invoking agent=Cursor_A (turn_id=3d4cca9f-043e-4bac-9612-1427966be935)
+2026-03-06 00:50:25,311 [src.core.orchestrator] INFO: [CALL] _invoke_one: agent_id=Cursor_A group_id=a411a4f8-220c-4f0b-bfd4-e662b215dfa9 invocation=must_reply turn_id=3d4cca9f-043e-4bac-9612-1427966be935
+2026-03-06 00:50:25,312 [src.core.context_builder] INFO: [CALL] context_builder.build_input: agent_id=Cursor_A session_id=a411a4f8-220c-4f0b-bfd4-e662b215dfa9 turn_id=3d4cca9f-043e-4bac-9612-1427966be935 invocation=must_reply mentioned_by=human
+2026-03-06 00:50:25,312 [src.core.orchestrator] ERROR: [CALL] Agent Cursor_A failed: 'Agent not found: architect'
+Traceback (most recent call last):
+  File "D:\projects\Agent_Arena\src\core\orchestrator.py", line 233, in execute_turn
+    result = await self._invoke_one(agent_id, group_id, "must_reply", turn)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\projects\Agent_Arena\src\core\orchestrator.py", line 388, in _invoke_one
+    agent_input = await self.context_builder.build_input(
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+    )
+    ^
+  File "D:\projects\Agent_Arena\src\core\context_builder.py", line 79, in build_input
+    peer_profile = self.registry.get_agent(aid)
+  File "D:\projects\Agent_Arena\src\registry\agent_registry.py", line 66, in get_agent
+    raise KeyError(f"Agent not found: {agent_id}")
+KeyError: 'Agent not found: architect'
+2026-03-06 00:50:39,587 [src.api.websocket] INFO: WebSocket disconnected from group a411a4f8-220c-4f0b-bfd4-e662b215dfa9
+2026-03-06 00:50:39,900 [src.api.websocket] INFO: WebSocket connected to group 8e0acc89-b777-4534-9265-adaec53dfd57
+2026-03-06 00:50:42,906 [src.api.websocket] INFO: WebSocket connected to group a411a4f8-220c-4f0b-bfd4-e662b215dfa9
+2026-03-06 00:50:47,550 [src.api.routes_message] INFO: [CALL] API send_message: group_id=8e0acc89-b777-4534-9265-adaec53dfd57 author_id=human content_len=16 mentions=['Cursor_A']
+2026-03-06 00:50:47,558 [src.api.routes_message] INFO: [CALL] API send_message: triggering orchestrator.on_new_message (async)
+2026-03-06 00:50:47,559 [src.core.orchestrator] INFO: [CALL] on_new_message: group_id=8e0acc89-b777-4534-9265-adaec53dfd57 author_id=human content_len=16 content_preview=@Monica 你现在是什么模型
+2026-03-06 00:50:47,564 [src.core.orchestrator] INFO: [CALL] Group resolved: agent_members=['Cursor_A']
+2026-03-06 00:50:47,564 [src.core.orchestrator] INFO: [CALL] Mention resolution: frontend_mentions=['Cursor_A'] parsed_mentions=['Cursor_A']
+2026-03-06 00:50:47,564 [src.core.orchestrator] INFO: [CALL] Explicit @mentions → must_reply=['Cursor_A']
+2026-03-06 00:50:47,565 [src.core.orchestrator] INFO: [CALL] Turn created: turn_id=bd3edb18-d4cf-469b-bbd4-8e31c90deaa5 trigger_source=human must_reply_agents=['Cursor_A'] max_responders=5
+2026-03-06 00:50:47,565 [src.core.orchestrator] INFO: [CALL] execute_turn: turn_id=bd3edb18-d4cf-469b-bbd4-8e31c90deaa5 group_id=8e0acc89-b777-4534-9265-adaec53dfd57 chain_depth=0 must_reply=['Cursor_A']
+2026-03-06 00:50:47,565 [src.core.orchestrator] INFO: [CALL] Invoking agent=Cursor_A (turn_id=bd3edb18-d4cf-469b-bbd4-8e31c90deaa5)
+2026-03-06 00:50:47,565 [src.core.orchestrator] INFO: [CALL] _invoke_one: agent_id=Cursor_A group_id=8e0acc89-b777-4534-9265-adaec53dfd57 invocation=must_reply turn_id=bd3edb18-d4cf-469b-bbd4-8e31c90deaa5
+2026-03-06 00:50:47,566 [src.core.context_builder] INFO: [CALL] context_builder.build_input: agent_id=Cursor_A session_id=8e0acc89-b777-4534-9265-adaec53dfd57 turn_id=bd3edb18-d4cf-469b-bbd4-8e31c90deaa5 invocation=must_reply mentioned_by=human
+2026-03-06 00:50:47,566 [src.core.context_builder] INFO: [CALL] context_builder: fetched recent messages_count=1 peers_count=0
+2026-03-06 00:50:47,581 [src.core.context_builder] INFO: [CALL] context_builder: memory_context=125 chars
+2026-03-06 00:50:47,600 [src.core.orchestrator] INFO: [CALL] AgentInput built for Cursor_A: messages=1 role_prompt_len=1784 memory=yes
+2026-03-06 00:50:47,600 [src.worker.runtime] INFO: [CALL] worker_runtime.invoke_agent: agent_id=Cursor_A session_id=8e0acc89-b777-4534-9265-adaec53dfd57 turn_id=bd3edb18-d4cf-469b-bbd4-8e31c90deaa5 invocation=must_reply
+2026-03-06 00:50:47,601 [src.worker.runtime] INFO: [CALL] worker_runtime: adapter_type=claude workspace=D:\projects\Agent_Arena\workspaces\Cursor_A passing to adapter.invoke
+2026-03-06 00:50:47,601 [src.worker.adapters.claude_cli] INFO: [CALL] claude_cli.invoke: agent_id=Cursor_A workspace_dir=D:\projects\Agent_Arena\workspaces\Cursor_A prompt_len=360 extra_args=[]
+2026-03-06 00:50:47,601 [src.worker.adapters.claude_cli] INFO: [CALL] claude_cli assembled prompt =====> ## 当前会话成员
+你是「Monica」(Cursor_A)。
+
+## 相关记忆
+### 个人长期记忆
+# Cursor_A - 个人长期记忆
+
+> 记录跨会话的重要经验、决策模式和工作洞察。
+> 由 Orchestrator 在解析 <!--PERSONAL_LOG:--> 标记后写入，也可在心跳蒸馏时由 Agent 自主更新。
+
+---
+## 当前待回复消息
+发送者: 用户
+内容:
+@Monica 你现在是什么模型
+---
+
+## 协作与提及 (Collaboration)
+如果你需要其他同事参与接龙或处理任务，请在回复的最末尾使用以下格式：
+`<!--NEXT_MENTIONS:["agent_id_1", "agent_id_2"]-->`
+(注意：agent_id 必须来自上方的「当前会话成员」列表)
+2026-03-06 00:50:47,602 [src.worker.adapters.claude_cli] INFO: [CALL] claude_cli cmd: ['claude', '-p', '--output-format', 'json', '--permission-mode', 'bypassPermissions'] (stdin prompt_len=666)

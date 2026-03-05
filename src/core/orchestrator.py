@@ -1,7 +1,8 @@
-"""编排引擎：系统的大脑，决定谁在什么时候、收到什么输入、是否必须回复。
+"""编排引擎：系统的大脑，决定谁在什么时候、收到什么输入执行任务。
 
-职责：解析 @mention、划分 must_reply / may_reply、按 Turn 执行 Agent 调用、
+职责：解析 @mention、按 FIFO 顺序串行执行被 @ 的 Agent、
 保存消息并推送 WebSocket，必要时链式触发下一轮 Turn。
+未被 @mention 的 Agent 不会被唤醒；同一群组内严格串行处理，禁止并发。
 
 记忆写入：从 Agent 输出中解析两种标记并写入对应存储：
   <!--MEMORY:{"type":"decision","content":"...","importance":0.9}-->
@@ -43,14 +44,15 @@ _RE_PERSONAL_LOG = re.compile(r"<!--PERSONAL_LOG:(.*?)-->", re.DOTALL)
 
 @dataclass
 class Turn:
-    """一个回合：由一条消息触发，包含必须回复与可选回复的 Agent 列表及执行参数。"""
+    """一个回合：由一条消息触发，包含必须回复的 Agent 列表及执行参数。
+    只有被 @ 的 Agent 才会执行，按 @mention 出现顺序 FIFO 串行执行。
+    """
 
     turn_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     trigger_message_id: str | None = None
     trigger_source: str = ""  # 触发者：user_id 或 agent_id
 
     must_reply_agents: list[str] = field(default_factory=list)
-    may_reply_agents: list[str] = field(default_factory=list)
     completed_replies: list[AgentOutput] = field(default_factory=list)
 
     group_agent_ids: list[str] = field(default_factory=list)
@@ -61,7 +63,7 @@ class Turn:
 
 
 class Orchestrator:
-    """编排引擎：根据新消息与 @mention 创建 Turn，依次执行 must_reply / may_reply 并处理链式回复。"""
+    """编排引擎：根据新消息与 @mention 创建 Turn，按 FIFO 顺序串行执行被 @ 的 Agent 并处理链式回复。"""
 
     def __init__(
         self,
@@ -88,6 +90,7 @@ class Orchestrator:
         self.session_summary = session_summary
         self.call_logger = call_logger
         self.conversation_managers = conversation_managers or {}  # Lazy: create on demand
+        self._group_locks: dict[str, asyncio.Lock] = {}  # 每个群组一把锁，防止并发执行
 
     def _get_conversation_manager(self, agent_id: str) -> Any:
         """为特定 Agent 获取或创建 ConversationManager。"""
@@ -182,57 +185,56 @@ class Orchestrator:
             mentions, parsed_mentions,
         )
 
-        must_reply: list[str] = []
-        may_reply: list[str] = []
+        # 只有被 @ 的 Agent 才会执行；没有 @mention 则静默跳过，不唤醒任何人
         if "@all" in parsed_mentions or "@所有人" in parsed_mentions:
             must_reply = list(agent_members)
             logger.info("[CALL] @all/所有人 → must_reply = all agents: %s", must_reply)
         else:
+            # 保留原始顺序（即 @mention 在消息中出现的顺序）→ FIFO
             must_reply = [m for m in parsed_mentions if m in agent_members]
-            may_reply = [m for m in agent_members if m not in must_reply]
-            logger.info("[CALL] Judged: must_reply=%s may_reply=%s", must_reply, may_reply)
+            logger.info("[CALL] Explicit @mentions → must_reply=%s", must_reply)
 
-        if not must_reply and not may_reply:
-            may_reply = list(agent_members)
-            logger.info("[CALL] No mentions → all as may_reply: %s", may_reply)
+        if not must_reply:
+            logger.info("[CALL] No @mentions matched any group member, skipping turn.")
+            return
 
         turn = Turn(
             trigger_source=author_id,
             must_reply_agents=must_reply,
-            may_reply_agents=may_reply,
             group_agent_ids=agent_members,
             max_responders=config.max_responders,
             timeout_seconds=config.turn_timeout_seconds,
             chain_depth=0,
         )
         logger.info(
-            "[CALL] Turn created: turn_id=%s trigger_source=%s must_reply_agents=%s "
-            "may_reply_agents=%s max_responders=%s",
-            turn.turn_id, turn.trigger_source, turn.must_reply_agents,
-            turn.may_reply_agents, turn.max_responders,
+            "[CALL] Turn created: turn_id=%s trigger_source=%s must_reply_agents=%s max_responders=%s",
+            turn.turn_id, turn.trigger_source, turn.must_reply_agents, turn.max_responders,
         )
 
-        await self.execute_turn(turn, group_id, config)
+        # 每个群组一把锁：同一群组内的消息严格串行处理，杜绝并发乱序
+        if group_id not in self._group_locks:
+            self._group_locks[group_id] = asyncio.Lock()
+        async with self._group_locks[group_id]:
+            await self.execute_turn(turn, group_id, config)
 
     async def execute_turn(self, turn: Turn, group_id: str, config: GroupConfig) -> None:
-        """执行一个完整回合：串行执行以保证上下文实时更新。"""
+        """执行一个完整回合：按 must_reply_agents 顺序串行执行，保证上下文实时更新。
+        只有被显式 @ 的 Agent 才会执行（FIFO 顺序）。
+        """
         logger.info(
-            "[CALL] execute_turn: turn_id=%s group_id=%s chain_depth=%s",
-            turn.turn_id, group_id, turn.chain_depth,
+            "[CALL] execute_turn: turn_id=%s group_id=%s chain_depth=%s must_reply=%s",
+            turn.turn_id, group_id, turn.chain_depth, turn.must_reply_agents,
         )
-        all_next_mentions: set[str] = set()
-        replied_agents: set[str] = set()
+        all_next_mentions: list[str] = []  # 保持顺序，避免 set 乱序
 
-        # Phase A：must_reply（被 @ 的）
-        # 改为串行执行，确保后一个被 @ 的人能看到前一个人的回复
         for agent_id in turn.must_reply_agents:
-            logger.info("[CALL] Phase A (must_reply) invoke: agent=%s", agent_id)
+            logger.info("[CALL] Invoking agent=%s (turn_id=%s)", agent_id, turn.turn_id)
             try:
                 result = await self._invoke_one(agent_id, group_id, "must_reply", turn)
                 output: AgentOutput = result
                 output = await self._process_memory_markers(output, agent_id, group_id)
-                
-                # 立即保存并广播，这样下一个 Agent 就能看到这条消息
+
+                # 立即保存并广播，确保下一个 Agent 能看到这条消息
                 await self._save_call_log_and_broadcast(output, agent_id, group_id, turn.turn_id)
                 await self.session_manager.save_message(
                     group_id=group_id,
@@ -243,7 +245,6 @@ class Orchestrator:
                     turn_id=turn.turn_id,
                     metadata={"next_mentions": output.next_mentions},
                 )
-                # 保存到对话文件
                 await self._save_agent_response_to_conversation(agent_id, group_id, output.content)
                 if self.ws_manager:
                     await self.ws_manager.broadcast_message(group_id, {
@@ -252,12 +253,13 @@ class Orchestrator:
                         "content": output.content,
                         "turn_id": turn.turn_id,
                     })
-                all_next_mentions.update(output.next_mentions)
-                replied_agents.add(agent_id)
+                # 收集 next_mentions，保持顺序、去重
+                for nm in output.next_mentions:
+                    if nm not in all_next_mentions:
+                        all_next_mentions.append(nm)
             except Exception as e:
                 logger.error("[CALL] Agent %s failed: %s", agent_id, e, exc_info=True)
                 await self._save_error_log(agent_id, group_id, turn.turn_id, str(e))
-                # 广播错误通知，避免用户误以为系统正常运行
                 profile = self.registry.get_agent(agent_id)
                 agent_name = profile.name if profile else agent_id
                 error_content = f"⚠️ [{agent_name}] 调用失败：{str(e)}"
@@ -275,78 +277,10 @@ class Orchestrator:
                     turn_id=turn.turn_id,
                 )
 
-        # Phase B：may_reply（可选）
-        # 同样改为串行，避免多人同时抢答导致的上下文错乱
-        remaining = turn.max_responders - len(replied_agents)
-        if remaining > 0 and turn.may_reply_agents:
-            potential_may_agents = [aid for aid in turn.may_reply_agents if aid not in replied_agents]
-            
-            for agent_id in potential_may_agents:
-                if len(replied_agents) >= turn.max_responders:
-                    break
-                
-                logger.info("[CALL] Phase B (may_reply) invoke: agent=%s", agent_id)
-                try:
-                    result = await self._invoke_one(agent_id, group_id, "may_reply", turn)
-                    output: AgentOutput = result
-                    if not output.should_respond:
-                        continue
-                        
-                    output = await self._process_memory_markers(output, agent_id, group_id)
-                    await self._save_call_log_and_broadcast(output, agent_id, group_id, turn.turn_id)
-                    await self.session_manager.save_message(
-                        group_id=group_id,
-                        author_id=agent_id,
-                        content=output.content,
-                        author_type="agent",
-                        author_name=self.registry.get_agent(agent_id).name,
-                        turn_id=turn.turn_id,
-                        metadata={"next_mentions": output.next_mentions},
-                    )
-                    # 保存到对话文件
-                    await self._save_agent_response_to_conversation(agent_id, group_id, output.content)
-                    if self.ws_manager:
-                        await self.ws_manager.broadcast_message(group_id, {
-                            "type": "agent_message",
-                            "agent_id": agent_id,
-                            "content": output.content,
-                            "turn_id": turn.turn_id,
-                        })
-                    all_next_mentions.update(output.next_mentions)
-                    replied_agents.add(agent_id)
-                except Exception as e:
-                    logger.error("[CALL] Agent %s (may_reply) failed: %s", agent_id, e, exc_info=True)
-                    await self._save_error_log(agent_id, group_id, turn.turn_id, str(e))
-                    profile = self.registry.get_agent(agent_id)
-                    agent_name = profile.name if profile else agent_id
-                    error_content = f"⚠️ [{agent_name}] 调用失败：{str(e)}"
-                    if self.ws_manager:
-                        await self.ws_manager.broadcast_message(group_id, {
-                            "type": "system_message",
-                            "content": error_content,
-                        })
-                    await self.session_manager.save_message(
-                        group_id=group_id,
-                        author_id="system",
-                        content=error_content,
-                        author_type="system",
-                        author_name="System",
-                        turn_id=turn.turn_id,
-                    )
-
-        # 根据 next_mentions 与链深度决定是否再开一轮 Turn
-        # 修复：不再强制减去 replied_agents。
-        # 只要有显式的 next_mentions，就应该允许在下一层 chain_depth 中继续触发，
-        # 即使该 Agent 在当前层已经回复过（这对于接龙、AB 对话至关重要）。
-        # 安全性由 chain_depth_limit 保证。
-
+        # 链式触发：Agent 在回复中 @mention 了其他 Agent → 开启下一轮（FIFO 顺序）
         if all_next_mentions and turn.chain_depth < config.chain_depth_limit:
-            # 使用初始快照成员列表，不重拉 DB，防止竞态条件引入新加入的成员
             agent_members = turn.group_agent_ids
-            # 过滤：只触发实际在群里的成员，防止 next_mentions 触发非群成员
             valid_next_mentions = [a for a in all_next_mentions if a in agent_members]
-            remaining_agents = [a for a in agent_members if a not in valid_next_mentions and a not in replied_agents]
-
             if not valid_next_mentions:
                 logger.warning("[CALL] next_mentions %s 全部不在群成员列表中，跳过链式触发", all_next_mentions)
             else:
@@ -356,7 +290,6 @@ class Orchestrator:
                 next_turn = Turn(
                     trigger_source="system",
                     must_reply_agents=valid_next_mentions,
-                    may_reply_agents=remaining_agents,
                     group_agent_ids=agent_members,
                     max_responders=config.max_responders,
                     timeout_seconds=config.turn_timeout_seconds,
