@@ -27,6 +27,12 @@
   color: #111827;
 }
 
+.log-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
 .log-refresh-btn {
   background: none;
   border: none;

@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from src.core.call_logger import CallLogger
+from src.core.session_log import current_session_id
 from src.models.protocol import AgentOutput
 from src.models.session import GroupConfig
 
@@ -148,6 +149,8 @@ class Orchestrator:
         mentions: list[str] | None = None,
     ) -> None:
         """处理新消息：查群组与成员、解析 @mention、划分 must/may_reply，创建并执行 Turn。"""
+        # 设置会话级日志上下文，后续所有 logging 输出都会路由到 session_{group_id}.log
+        current_session_id.set(group_id)
         logger.info(
             "[CALL] on_new_message: group_id=%s author_id=%s content_len=%d content_preview=%s",
             group_id, author_id, len(message_content),

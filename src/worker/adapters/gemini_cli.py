@@ -48,7 +48,7 @@ class GeminiCliAdapter(BaseAdapter):
 
     def __init__(
         self,
-        timeout: int = 300,
+        timeout: int = 60 * 40,
         extra_args: list[str] | None = None,
         env: dict[str, str] | None = None,
         mcp_config=None,

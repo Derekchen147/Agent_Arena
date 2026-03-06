@@ -82,9 +82,24 @@ export default function LogPanel({ groupId, agents, turnLogMap }: Props) {
     <div className="log-panel">
       <div className="log-panel-header">
         <span className="log-panel-title">📋 调用日志</span>
-        <button className="log-refresh-btn" onClick={loadLogs} disabled={loading}>
-          {loading ? '⟳' : '↻'}
-        </button>
+        <div className="log-header-actions">
+          <button
+            className="log-refresh-btn"
+            title="下载 Terminal 日志"
+            onClick={() => {
+              if (!groupId) return;
+              const a = document.createElement('a');
+              a.href = `/api/messages/logs/${groupId}/terminal`;
+              a.download = `session_${groupId}.log`;
+              a.click();
+            }}
+          >
+            ⬇
+          </button>
+          <button className="log-refresh-btn" onClick={loadLogs} disabled={loading}>
+            {loading ? '⟳' : '↻'}
+          </button>
+        </div>
       </div>
 
       {logs.length === 0 && !loading && (

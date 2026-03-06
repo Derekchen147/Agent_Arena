@@ -9,7 +9,10 @@ import asyncio
 import logging
 
 from fastapi import APIRouter
+from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field
+
+from src.core.session_log import current_session_id, get_session_log_path
 
 router = APIRouter(prefix="/api/messages", tags=["messages"])
 logger = logging.getLogger(__name__)
@@ -38,6 +41,7 @@ async def get_messages(group_id: str, limit: int = 50, before: str | None = None
 async def send_message(req: SendMessageRequest):
     """发送一条人类消息：落库 → WebSocket 广播 → 异步触发编排（Agent 回复在后台进行）。"""
     from src.main import app_state
+    current_session_id.set(req.group_id)
 
     logger.info(
         "[CALL] API send_message: group_id=%s author_id=%s content_len=%d mentions=%s",
@@ -84,3 +88,15 @@ async def get_call_logs(group_id: str):
         return {"logs": []}
     logs = app_state.call_logger.get_session_logs(group_id)
     return {"logs": [log.model_dump(mode="json") for log in logs]}
+
+
+@router.get("/logs/{group_id}/terminal")
+async def get_terminal_logs(group_id: str):
+    """获取指定会话的完整 terminal 日志文本。"""
+    path = get_session_log_path(group_id)
+    if not path:
+        return PlainTextResponse("", status_code=200)
+    content = path.read_text(encoding="utf-8")
+    return PlainTextResponse(content, headers={
+        "Content-Disposition": f'attachment; filename="session_{group_id}.log"',
+    })

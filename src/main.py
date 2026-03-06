@@ -25,6 +25,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.core.call_logger import CallLogger
+from src.core.session_log import SessionLogHandler, current_session_id
 from src.api.routes_agent import router as agent_router
 from src.api.routes_group import router as group_router
 from src.api.routes_message import router as message_router
@@ -57,6 +58,10 @@ _file_handler = RotatingFileHandler(
 )
 _file_handler.setFormatter(logging.Formatter(_LOG_FORMAT))
 logging.getLogger().addHandler(_file_handler)
+
+# 按会话路由日志到独立文件
+_session_handler = SessionLogHandler(log_dir="data/logs")
+logging.getLogger().addHandler(_session_handler)
 
 logger = logging.getLogger(__name__)
 logger.info("Server log file: data/logs/server_%s.log", _log_date)
@@ -205,6 +210,7 @@ async def health():
 @app.websocket("/ws/{group_id}")
 async def websocket_endpoint(websocket: WebSocket, group_id: str):
     """WebSocket 入口：客户端连接后，接收 send_message 并落库、触发编排。"""
+    current_session_id.set(group_id)
     await app_state.ws_manager.connect(websocket, group_id)
     try:
         while True:

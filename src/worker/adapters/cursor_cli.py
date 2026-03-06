@@ -53,7 +53,7 @@ class CursorCliAdapter(BaseAdapter):
     def __init__(
         self,
         command: str = "agent",
-        timeout: int = 300,
+        timeout: int = 60 * 40,
         extra_args: list[str] | None = None,
         env: dict[str, str] | None = None,
         mcp_config=None,
