@@ -566,6 +566,7 @@ export default function AgentManagement({ agents, onAgentsChanged, onBack }: Pro
                   <option value="claude">Claude CLI</option>
                   <option value="gemini">Gemini CLI</option>
                   <option value="cursor">Cursor CLI</option>
+                  <option value="opencode">OpenCode CLI</option>
                   <option value="generic">Generic CLI</option>
                 </select>
               </div>
@@ -579,14 +580,20 @@ export default function AgentManagement({ agents, onAgentsChanged, onBack }: Pro
                 />
               </div>
             </div>
-            {(form.cli_type === 'cursor' || form.cli_type === 'generic') && (
+            {(form.cli_type === 'cursor' || form.cli_type === 'opencode' || form.cli_type === 'generic') && (
               <div className="am-form-row">
-                <label className="am-form-label">命令路径</label>
+                <label className="am-form-label">
+                  {form.cli_type === 'opencode' ? '模型（可选）' : '命令路径'}
+                </label>
                 <input
                   className="am-form-input"
                   value={form.command}
                   onChange={(e) => updateField('command', e.target.value)}
-                  placeholder={form.cli_type === 'cursor' ? 'agent（默认）' : '可执行文件路径'}
+                  placeholder={
+                    form.cli_type === 'cursor' ? 'agent（默认）' :
+                    form.cli_type === 'opencode' ? 'anthropic/claude-sonnet-4-5（留空用默认）' :
+                    '可执行文件路径'
+                  }
                 />
               </div>
             )}

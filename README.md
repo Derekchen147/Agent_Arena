@@ -1,3 +1,5 @@
+hello from opencode
+
 hello from openclaw
 # Agent Arena — 架构设计（Claude 版）
 

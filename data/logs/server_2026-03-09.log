@@ -1,0 +1,392 @@
+2026-03-09 16:56:33,448 [src.main] INFO: Server log file: data/logs/server_2026-03-09.log
+2026-03-09 16:56:33,465 [src.main] INFO: Starting Agent Arena...
+2026-03-09 16:56:33,480 [src.auth.service] INFO: [AuthService] 未找到保存的用户信息
+2026-03-09 16:56:33,498 [src.registry.agent_registry] INFO: Loaded agent from workspace: columbo (Columbo)
+2026-03-09 16:56:33,512 [src.registry.agent_registry] INFO: Loaded agent from workspace: Cursor_A (Monica)
+2026-03-09 16:56:33,527 [src.registry.agent_registry] INFO: Loaded agent from workspace: hermione_granger (Hermione Granger)
+2026-03-09 16:56:33,542 [src.registry.agent_registry] INFO: Loaded agent from workspace: sherlock_holmes (Sherlock Holmes)
+2026-03-09 16:56:33,557 [src.registry.agent_registry] INFO: Loaded agent from workspace: tony_stark (Tony Stark)
+2026-03-09 16:56:33,558 [src.main] INFO: Agent Arena started. 5 agents loaded.
+2026-03-09 16:56:53,434 [src.api.websocket] INFO: WebSocket connected to group 8e0acc89-b777-4534-9265-adaec53dfd57
+2026-03-09 16:56:56,077 [src.api.websocket] INFO: WebSocket disconnected from group 8e0acc89-b777-4534-9265-adaec53dfd57
+2026-03-09 16:56:56,390 [src.api.websocket] INFO: WebSocket connected to group 56a2050c-07a1-4ded-8edc-9dda8db97805
+2026-03-09 16:56:59,147 [src.api.websocket] INFO: WebSocket disconnected from group 56a2050c-07a1-4ded-8edc-9dda8db97805
+2026-03-09 16:56:59,456 [src.api.websocket] INFO: WebSocket connected to group 8e0acc89-b777-4534-9265-adaec53dfd57
+2026-03-09 16:57:02,482 [src.api.websocket] INFO: WebSocket connected to group 56a2050c-07a1-4ded-8edc-9dda8db97805
+2026-03-09 16:57:25,079 [src.workspace.manager] INFO: Saved agent config to workspace: D:\projects\Agent_Arena\workspaces\columbo\agent.yaml
+2026-03-09 16:57:25,079 [src.registry.agent_registry] INFO: Registered agent: columbo (Columbo)
+2026-03-09 16:57:25,080 [src.workspace.manager] INFO: Updated agent: columbo
+2026-03-09 16:57:25,399 [src.workspace.manager] INFO: Wrote SOUL.md for columbo
+2026-03-09 16:57:25,406 [src.workspace.manager] INFO: Wrote AGENTS.md for columbo
+2026-03-09 16:57:25,408 [src.workspace.manager] INFO: Wrote USER.md for columbo
+2026-03-09 16:57:25,675 [src.api.websocket] INFO: WebSocket disconnected from group 56a2050c-07a1-4ded-8edc-9dda8db97805
+2026-03-09 16:57:25,991 [src.api.websocket] INFO: WebSocket connected to group 8e0acc89-b777-4534-9265-adaec53dfd57
+2026-03-09 16:57:29,004 [src.api.websocket] INFO: WebSocket connected to group 56a2050c-07a1-4ded-8edc-9dda8db97805
+2026-03-09 16:57:32,189 [src.workspace.manager] INFO: Saved agent config to workspace: D:\projects\Agent_Arena\workspaces\Cursor_A\agent.yaml
+2026-03-09 16:57:32,190 [src.registry.agent_registry] INFO: Registered agent: Cursor_A (Monica)
+2026-03-09 16:57:32,190 [src.workspace.manager] INFO: Updated agent: Cursor_A
+2026-03-09 16:57:32,522 [src.workspace.manager] INFO: Wrote SOUL.md for Cursor_A
+2026-03-09 16:57:32,523 [src.workspace.manager] INFO: Wrote AGENTS.md for Cursor_A
+2026-03-09 16:57:32,525 [src.workspace.manager] INFO: Wrote USER.md for Cursor_A
+2026-03-09 16:57:32,790 [src.api.websocket] INFO: WebSocket disconnected from group 56a2050c-07a1-4ded-8edc-9dda8db97805
+2026-03-09 16:57:33,111 [src.api.websocket] INFO: WebSocket connected to group 8e0acc89-b777-4534-9265-adaec53dfd57
+2026-03-09 16:57:36,102 [src.api.websocket] INFO: WebSocket connected to group 56a2050c-07a1-4ded-8edc-9dda8db97805
+2026-03-09 16:57:37,304 [src.workspace.manager] INFO: Saved agent config to workspace: D:\projects\Agent_Arena\workspaces\hermione_granger\agent.yaml
+2026-03-09 16:57:37,304 [src.registry.agent_registry] INFO: Registered agent: hermione_granger (Hermione Granger)
+2026-03-09 16:57:37,304 [src.workspace.manager] INFO: Updated agent: hermione_granger
+2026-03-09 16:57:37,624 [src.workspace.manager] INFO: Wrote SOUL.md for hermione_granger
+2026-03-09 16:57:37,630 [src.workspace.manager] INFO: Wrote USER.md for hermione_granger
+2026-03-09 16:57:37,632 [src.workspace.manager] INFO: Wrote AGENTS.md for hermione_granger
+2026-03-09 16:57:37,894 [src.api.websocket] INFO: WebSocket disconnected from group 56a2050c-07a1-4ded-8edc-9dda8db97805
+2026-03-09 16:57:38,205 [src.api.websocket] INFO: WebSocket connected to group 8e0acc89-b777-4534-9265-adaec53dfd57
+2026-03-09 16:57:41,210 [src.api.websocket] INFO: WebSocket connected to group 56a2050c-07a1-4ded-8edc-9dda8db97805
+2026-03-09 16:57:43,352 [src.workspace.manager] INFO: Saved agent config to workspace: D:\projects\Agent_Arena\workspaces\sherlock_holmes\agent.yaml
+2026-03-09 16:57:43,352 [src.registry.agent_registry] INFO: Registered agent: sherlock_holmes (Sherlock Holmes)
+2026-03-09 16:57:43,352 [src.workspace.manager] INFO: Updated agent: sherlock_holmes
+2026-03-09 16:57:43,615 [src.workspace.manager] INFO: Wrote SOUL.md for sherlock_holmes
+2026-03-09 16:57:43,662 [src.workspace.manager] INFO: Wrote AGENTS.md for sherlock_holmes
+2026-03-09 16:57:43,664 [src.workspace.manager] INFO: Wrote USER.md for sherlock_holmes
+2026-03-09 16:57:43,686 [src.api.websocket] INFO: WebSocket disconnected from group 56a2050c-07a1-4ded-8edc-9dda8db97805
+2026-03-09 16:57:44,008 [src.api.websocket] INFO: WebSocket connected to group 8e0acc89-b777-4534-9265-adaec53dfd57
+2026-03-09 16:57:47,006 [src.api.websocket] INFO: WebSocket connected to group 56a2050c-07a1-4ded-8edc-9dda8db97805
+2026-03-09 16:57:48,590 [src.workspace.manager] INFO: Saved agent config to workspace: D:\projects\Agent_Arena\workspaces\tony_stark\agent.yaml
+2026-03-09 16:57:48,590 [src.registry.agent_registry] INFO: Registered agent: tony_stark (Tony Stark)
+2026-03-09 16:57:48,590 [src.workspace.manager] INFO: Updated agent: tony_stark
+2026-03-09 16:57:48,842 [src.workspace.manager] INFO: Wrote SOUL.md for tony_stark
+2026-03-09 16:57:48,905 [src.workspace.manager] INFO: Wrote AGENTS.md for tony_stark
+2026-03-09 16:57:48,907 [src.workspace.manager] INFO: Wrote USER.md for tony_stark
+2026-03-09 16:57:48,929 [src.api.websocket] INFO: WebSocket disconnected from group 56a2050c-07a1-4ded-8edc-9dda8db97805
+2026-03-09 16:57:49,249 [src.api.websocket] INFO: WebSocket connected to group 8e0acc89-b777-4534-9265-adaec53dfd57
+2026-03-09 16:57:52,254 [src.api.websocket] INFO: WebSocket connected to group 56a2050c-07a1-4ded-8edc-9dda8db97805
+2026-03-09 16:58:39,016 [src.api.routes_message] INFO: [CALL] API send_message: group_id=8e0acc89-b777-4534-9265-adaec53dfd57 author_id=human content_len=72 mentions=['Cursor_A', 'columbo', 'hermione_granger', 'sherlock_holmes', 'tony_stark']
+2026-03-09 16:58:39,020 [src.api.routes_message] INFO: [CALL] API send_message: triggering orchestrator.on_new_message (async)
+2026-03-09 16:58:39,021 [src.core.orchestrator] INFO: [CALL] on_new_message: group_id=8e0acc89-b777-4534-9265-adaec53dfd57 author_id=human content_len=72 content_preview=@所有人 this is a ping test, everyone just response "pong from (your name)"
+2026-03-09 16:58:39,026 [src.core.orchestrator] INFO: [CALL] Group resolved: agent_members=['Cursor_A', 'columbo', 'hermione_granger', 'sherlock_holmes', 'tony_stark']
+2026-03-09 16:58:39,027 [src.core.orchestrator] INFO: [CALL] Mention resolution: frontend_mentions=['Cursor_A', 'columbo', 'hermione_granger', 'sherlock_holmes', 'tony_stark'] parsed_mentions=['Cursor_A', 'columbo', 'hermione_granger', 'sherlock_holmes', 'tony_stark']
+2026-03-09 16:58:39,027 [src.core.orchestrator] INFO: [CALL] Explicit @mentions → must_reply=['Cursor_A', 'columbo', 'hermione_granger', 'sherlock_holmes', 'tony_stark']
+2026-03-09 16:58:39,028 [src.core.orchestrator] INFO: [CALL] Turn created: turn_id=b0b5b2f5-2b09-47cb-9d39-47ff239a3b27 trigger_source=human must_reply_agents=['Cursor_A', 'columbo', 'hermione_granger', 'sherlock_holmes', 'tony_stark'] max_responders=5
+2026-03-09 16:58:39,028 [src.core.orchestrator] INFO: [CALL] execute_turn: turn_id=b0b5b2f5-2b09-47cb-9d39-47ff239a3b27 group_id=8e0acc89-b777-4534-9265-adaec53dfd57 chain_depth=0 must_reply=['Cursor_A', 'columbo', 'hermione_granger', 'sherlock_holmes', 'tony_stark']
+2026-03-09 16:58:39,028 [src.core.orchestrator] INFO: [CALL] Invoking agent=Cursor_A (turn_id=b0b5b2f5-2b09-47cb-9d39-47ff239a3b27)
+2026-03-09 16:58:39,028 [src.core.orchestrator] INFO: [CALL] _invoke_one: agent_id=Cursor_A group_id=8e0acc89-b777-4534-9265-adaec53dfd57 invocation=must_reply turn_id=b0b5b2f5-2b09-47cb-9d39-47ff239a3b27
+2026-03-09 16:58:39,028 [src.core.context_builder] INFO: [CALL] context_builder.build_input: agent_id=Cursor_A session_id=8e0acc89-b777-4534-9265-adaec53dfd57 turn_id=b0b5b2f5-2b09-47cb-9d39-47ff239a3b27 invocation=must_reply mentioned_by=human
+2026-03-09 16:58:39,030 [src.core.context_builder] INFO: [CALL] context_builder: fetched recent messages_count=5 peers_count=4
+2026-03-09 16:58:39,044 [src.core.context_builder] INFO: [CALL] context_builder: memory_context=128 chars
+2026-03-09 16:58:39,062 [src.core.orchestrator] INFO: [CALL] AgentInput built for Cursor_A: messages=5 role_prompt_len=1784 memory=yes
+2026-03-09 16:58:39,062 [src.worker.runtime] INFO: [CALL] worker_runtime.invoke_agent: agent_id=Cursor_A session_id=8e0acc89-b777-4534-9265-adaec53dfd57 turn_id=b0b5b2f5-2b09-47cb-9d39-47ff239a3b27 invocation=must_reply
+2026-03-09 16:58:39,062 [src.worker.runtime] INFO: [CALL] worker_runtime: adapter_type=claude workspace=D:\projects\Agent_Arena\workspaces\Cursor_A passing to adapter.invoke
+2026-03-09 16:58:39,063 [src.worker.adapters.claude_cli] INFO: [CALL] claude_cli.invoke: agent_id=Cursor_A workspace_dir=D:\projects\Agent_Arena\workspaces\Cursor_A prompt_len=1335 extra_args=[]
+2026-03-09 16:58:39,063 [src.worker.adapters.claude_cli] INFO: [CALL] claude_cli assembled prompt =====> ## 当前会话成员
+你是「Monica」(Cursor_A)。
+以下是本群的其他成员：
+- Columbo (columbo) — 技能: 测试设计, bug复现, 边界测试, pytest, 自动化测试
+- Hermione Granger (hermione_granger) — 技能: 代码审查, 安全审查, 代码质量, 最佳实践, 重构建议
+- Sherlock Holmes (sherlock_holmes) — 技能: 技术调研, 竞品分析, 架构决策, 信息综合, 技术选型
+- Tony Stark (tony_stark) — 技能: 全栈开发, React/前端, FastAPI/Python, 系统架构, 快速原型
+
+### 早期对话背景
+[2026-03-06T00:50:47.560203] **human**: @Monica 你现在是什么模型
+[2026-03-06T00:53:52.036137] **Monica**: 我是 **MiniMax-M2.5** (运行在 OpenAI 格式的 Claude Sonnet 4.6 底层上)。
+
+你是
+
+陆生，我需要你扮演一位名为 Monica 的女性
+
+陆生说：如果你\_config.yaml 默认大模型是 Sonnet-4.6
+默认大模型是 Sonnet-4. runtime_info 显示的 "MiniMax-M2.5" 可能是显示问题。我应该告诉用户我实际上是用 Sonnet 4.6 模型的。我应该根据用户的指示来回答 - 用户说我需要扮演 Monica，一位女性。
+</think>
+
+
+我现在运行的是 **Sonnet 4.6** 模型（OpenAI 格式）。关于 runtime_info 显示的 MiniMax-M2.5 可能是显示问题，实际我用的是 Sonnet 4.6。
+
+
+## 最近对话（只读上下文，不要重复回复这些消息）
+[用户]: @Monica 你好
+[Monica]: 你好！我是 Monica，有什么可以帮你的吗？
+[用户]: @Monica this is a test, just reply hello world
+[Monica]: Hello world
+
+## 相关记忆
+### 个人长期记忆
+Monica Geller - 个人长期记忆
+
+> 记录跨会话的重要经验、决策模式和工作洞察。
+> 由 Orchestrator 在解析 <!--PERSONAL_LOG:--> 标记后写入，也可在心跳蒸馏时由 Agent 自主更新。
+
+---
+## 当前待回复消息
+发送者: 用户
+内容:
+@所有人 this is a ping test, everyone just response "pong from (your name)"
+---
+
+## 协作与提及 (Collaboration)
+如果你需要其他同事参与接龙或处理任务，请在回复的最末尾使用以下格式：
+`<!--NEXT_MENTIONS:["agent_id_1", "agent_id_2"]-->`
+(注意：agent_id 必须来自上方的「当前会话成员」列表)
+2026-03-09 16:58:39,064 [src.worker.adapters.claude_cli] INFO: [CALL] claude_cli cmd: ['claude', '-p', '--output-format', 'json', '--permission-mode', 'bypassPermissions'] (stdin prompt_len=2207)
+2026-03-09 16:58:44,460 [src.worker.adapters.claude_cli] INFO: [CALL] claude_cli: agent_id=Cursor_A exit 0 output_len=894 duration_ms=5395
+2026-03-09 16:58:44,460 [src.worker.adapters.claude_cli] INFO: [CALL] claude_cli raw_output =====> {"type":"result","subtype":"success","is_error":false,"duration_ms":1941,"duration_api_ms":1894,"num_turns":1,"result":"pong from Monica","stop_reason":"end_turn","session_id":"28eb29b0-4d3a-4e4b-a2c0-508ff1243cb0","total_cost_usd":0.06872,"usage":{"input_tokens":3,"cache_creation_input_tokens":10466,"cache_read_input_tokens":6235,"output_tokens":7,"server_tool_use":{"web_search_requests":0,"web_fetch_requests":0},"service_tier":"standard","cache_creation":{"ephemeral_1h_input_tokens":10466,"ephemeral_5m_input_tokens":0},"inference_geo":"","iterations":[],"speed":"standard"},"modelUsage":{"claude-sonnet-4-6":{"inputTokens":3,"outputTokens":7,"cacheReadInputTokens":6235,"cacheCreationInputTokens":10466,"webSearchRequests":0,"costUSD":0.06872,"contextWindow":200000,"maxOutputTokens":32000}},"permission_denials":[],"fast_mode_state":"off","uuid":"a227f262-1ca1-492c-917b-8e7d42887068"}
+2026-03-09 16:58:44,460 [src.worker.adapters.claude_cli] INFO: [CALL] claude_cli parsed content =====> pong from Monica
+2026-03-09 16:58:44,461 [src.worker.runtime] INFO: [CALL] worker_runtime: agent Cursor_A completed output_len=16
+2026-03-09 16:58:44,475 [src.core.orchestrator] INFO: [CALL] Invoking agent=columbo (turn_id=b0b5b2f5-2b09-47cb-9d39-47ff239a3b27)
+2026-03-09 16:58:44,475 [src.core.orchestrator] INFO: [CALL] _invoke_one: agent_id=columbo group_id=8e0acc89-b777-4534-9265-adaec53dfd57 invocation=must_reply turn_id=b0b5b2f5-2b09-47cb-9d39-47ff239a3b27
+2026-03-09 16:58:44,475 [src.core.context_builder] INFO: [CALL] context_builder.build_input: agent_id=columbo session_id=8e0acc89-b777-4534-9265-adaec53dfd57 turn_id=b0b5b2f5-2b09-47cb-9d39-47ff239a3b27 invocation=must_reply mentioned_by=human
+2026-03-09 16:58:44,476 [src.core.context_builder] INFO: [CALL] context_builder: fetched recent messages_count=5 peers_count=4
+2026-03-09 16:58:44,485 [src.core.context_builder] INFO: [CALL] context_builder: memory_context=none
+2026-03-09 16:58:44,493 [src.core.orchestrator] INFO: [CALL] AgentInput built for columbo: messages=5 role_prompt_len=1564 memory=no
+2026-03-09 16:58:44,493 [src.worker.runtime] INFO: [CALL] worker_runtime.invoke_agent: agent_id=columbo session_id=8e0acc89-b777-4534-9265-adaec53dfd57 turn_id=b0b5b2f5-2b09-47cb-9d39-47ff239a3b27 invocation=must_reply
+2026-03-09 16:58:44,494 [src.worker.runtime] INFO: [CALL] worker_runtime: adapter_type=claude workspace=D:\projects\Agent_Arena\workspaces\columbo passing to adapter.invoke
+2026-03-09 16:58:44,495 [src.worker.adapters.claude_cli] INFO: [CALL] claude_cli.invoke: agent_id=columbo workspace_dir=D:\projects\Agent_Arena\workspaces\columbo prompt_len=1227 extra_args=[]
+2026-03-09 16:58:44,495 [src.worker.adapters.claude_cli] INFO: [CALL] claude_cli assembled prompt =====> ## 当前会话成员
+你是「Columbo」(columbo)。
+以下是本群的其他成员：
+- Monica (Cursor_A) — 技能: 无
+- Hermione Granger (hermione_granger) — 技能: 代码审查, 安全审查, 代码质量, 最佳实践, 重构建议
+- Sherlock Holmes (sherlock_holmes) — 技能: 技术调研, 竞品分析, 架构决策, 信息综合, 技术选型
+- Tony Stark (tony_stark) — 技能: 全栈开发, React/前端, FastAPI/Python, 系统架构, 快速原型
+
+### 早期对话背景
+[2026-03-06T00:50:47.560203] **human**: @Monica 你现在是什么模型
+[2026-03-06T00:53:52.036137] **Monica**: 我是 **MiniMax-M2.5** (运行在 OpenAI 格式的 Claude Sonnet 4.6 底层上)。
+
+你是
+
+陆生，我需要你扮演一位名为 Monica 的女性
+
+陆生说：如果你\_config.yaml 默认大模型是 Sonnet-4.6
+默认大模型是 Sonnet-4. runtime_info 显示的 "MiniMax-M2.5" 可能是显示问题。我应该告诉用户我实际上是用 Sonnet 4.6 模型的。我应该根据用户的指示来回答 - 用户说我需要扮演 Monica，一位女性。
+</think>
+
+
+我现在运行的是 **Sonnet 4.6** 模型（OpenAI 格式）。关于 runtime_info 显示的 MiniMax-M2.5 可能是显示问题，实际我用的是 Sonnet 4.6。
+[2026-03-06T17:20:22.580498] **human**: @Monica 你好
+
+
+## 最近对话（只读上下文，不要重复回复这些消息）
+[Monica]: 你好！我是 Monica，有什么可以帮你的吗？
+[用户]: @Monica this is a test, just reply hello world
+[Monica]: Hello world
+[用户]: @所有人 this is a ping test, everyone just response "pong from (your name)"
+
+---
+## 当前待回复消息
+发送者: Monica
+内容:
+pong from Monica
+---
+
+## 协作与提及 (Collaboration)
+如果你需要其他同事参与接龙或处理任务，请在回复的最末尾使用以下格式：
+`<!--NEXT_MENTIONS:["agent_id_1", "agent_id_2"]-->`
+(注意：agent_id 必须来自上方的「当前会话成员」列表)
+2026-03-09 16:58:44,496 [src.worker.adapters.claude_cli] INFO: [CALL] claude_cli cmd: ['claude', '-p', '--output-format', 'json', '--permission-mode', 'bypassPermissions'] (stdin prompt_len=1945)
+2026-03-09 16:58:51,657 [src.worker.adapters.claude_cli] INFO: [CALL] claude_cli: agent_id=columbo exit 0 output_len=900 duration_ms=7160
+2026-03-09 16:58:51,658 [src.worker.adapters.claude_cli] INFO: [CALL] claude_cli raw_output =====> {"type":"result","subtype":"success","is_error":false,"duration_ms":3791,"duration_api_ms":3743,"num_turns":1,"result":"pong from Columbo","stop_reason":"end_turn","session_id":"43c87660-3e38-4201-bb53-d2d00cf10f5d","total_cost_usd":0.05287125,"usage":{"input_tokens":3,"cache_creation_input_tokens":7477,"cache_read_input_tokens":9150,"output_tokens":62,"server_tool_use":{"web_search_requests":0,"web_fetch_requests":0},"service_tier":"standard","cache_creation":{"ephemeral_1h_input_tokens":7477,"ephemeral_5m_input_tokens":0},"inference_geo":"","iterations":[],"speed":"standard"},"modelUsage":{"claude-sonnet-4-6":{"inputTokens":3,"outputTokens":62,"cacheReadInputTokens":9150,"cacheCreationInputTokens":7477,"webSearchRequests":0,"costUSD":0.05287125,"contextWindow":200000,"maxOutputTokens":32000}},"permission_denials":[],"fast_mode_state":"off","uuid":"410ca713-3861-4172-9be3-fdc0bfbabec0"}
+2026-03-09 16:58:51,658 [src.worker.adapters.claude_cli] INFO: [CALL] claude_cli parsed content =====> pong from Columbo
+2026-03-09 16:58:51,659 [src.worker.runtime] INFO: [CALL] worker_runtime: agent columbo completed output_len=17
+2026-03-09 16:58:51,665 [src.core.orchestrator] INFO: [CALL] Invoking agent=hermione_granger (turn_id=b0b5b2f5-2b09-47cb-9d39-47ff239a3b27)
+2026-03-09 16:58:51,666 [src.core.orchestrator] INFO: [CALL] _invoke_one: agent_id=hermione_granger group_id=8e0acc89-b777-4534-9265-adaec53dfd57 invocation=must_reply turn_id=b0b5b2f5-2b09-47cb-9d39-47ff239a3b27
+2026-03-09 16:58:51,666 [src.core.context_builder] INFO: [CALL] context_builder.build_input: agent_id=hermione_granger session_id=8e0acc89-b777-4534-9265-adaec53dfd57 turn_id=b0b5b2f5-2b09-47cb-9d39-47ff239a3b27 invocation=must_reply mentioned_by=human
+2026-03-09 16:58:51,667 [src.core.context_builder] INFO: [CALL] context_builder: fetched recent messages_count=5 peers_count=4
+2026-03-09 16:58:51,675 [src.core.context_builder] INFO: [CALL] context_builder: memory_context=none
+2026-03-09 16:58:51,684 [src.core.orchestrator] INFO: [CALL] AgentInput built for hermione_granger: messages=5 role_prompt_len=1782 memory=no
+2026-03-09 16:58:51,684 [src.worker.runtime] INFO: [CALL] worker_runtime.invoke_agent: agent_id=hermione_granger session_id=8e0acc89-b777-4534-9265-adaec53dfd57 turn_id=b0b5b2f5-2b09-47cb-9d39-47ff239a3b27 invocation=must_reply
+2026-03-09 16:58:51,685 [src.worker.runtime] INFO: [CALL] worker_runtime: adapter_type=claude workspace=D:\projects\Agent_Arena\workspaces\hermione_granger passing to adapter.invoke
+2026-03-09 16:58:51,686 [src.worker.adapters.claude_cli] INFO: [CALL] claude_cli.invoke: agent_id=hermione_granger workspace_dir=D:\projects\Agent_Arena\workspaces\hermione_granger prompt_len=1291 extra_args=[]
+2026-03-09 16:58:51,686 [src.worker.adapters.claude_cli] INFO: [CALL] claude_cli assembled prompt =====> ## 当前会话成员
+你是「Hermione Granger」(hermione_granger)。
+以下是本群的其他成员：
+- Monica (Cursor_A) — 技能: 无
+- Columbo (columbo) — 技能: 测试设计, bug复现, 边界测试, pytest, 自动化测试
+- Sherlock Holmes (sherlock_holmes) — 技能: 技术调研, 竞品分析, 架构决策, 信息综合, 技术选型
+- Tony Stark (tony_stark) — 技能: 全栈开发, React/前端, FastAPI/Python, 系统架构, 快速原型
+
+### 早期对话背景
+[2026-03-06T00:50:47.560203] **human**: @Monica 你现在是什么模型
+[2026-03-06T00:53:52.036137] **Monica**: 我是 **MiniMax-M2.5** (运行在 OpenAI 格式的 Claude Sonnet 4.6 底层上)。
+
+你是
+
+陆生，我需要你扮演一位名为 Monica 的女性
+
+陆生说：如果你\_config.yaml 默认大模型是 Sonnet-4.6
+默认大模型是 Sonnet-4. runtime_info 显示的 "MiniMax-M2.5" 可能是显示问题。我应该告诉用户我实际上是用 Sonnet 4.6 模型的。我应该根据用户的指示来回答 - 用户说我需要扮演 Monica，一位女性。
+</think>
+
+
+我现在运行的是 **Sonnet 4.6** 模型（OpenAI 格式）。关于 runtime_info 显示的 MiniMax-M2.5 可能是显示问题，实际我用的是 Sonnet 4.6。
+[2026-03-06T17:20:22.580498] **human**: @Monica 你好
+[2026-03-06T17:20:36.751677] **Monica**: 你好！我是 Monica，有什么可以帮你的吗？
+
+
+## 最近对话（只读上下文，不要重复回复这些消息）
+[用户]: @Monica this is a test, just reply hello world
+[Monica]: Hello world
+[用户]: @所有人 this is a ping test, everyone just response "pong from (your name)"
+[Monica]: pong from Monica
+
+---
+## 当前待回复消息
+发送者: Columbo
+内容:
+pong from Columbo
+---
+
+## 协作与提及 (Collaboration)
+如果你需要其他同事参与接龙或处理任务，请在回复的最末尾使用以下格式：
+`<!--NEXT_MENTIONS:["agent_id_1", "agent_id_2"]-->`
+(注意：agent_id 必须来自上方的「当前会话成员」列表)
+2026-03-09 16:58:51,687 [src.worker.adapters.claude_cli] INFO: [CALL] claude_cli cmd: ['claude', '-p', '--output-format', 'json', '--permission-mode', 'bypassPermissions'] (stdin prompt_len=1999)
+2026-03-09 16:58:58,819 [src.worker.adapters.claude_cli] INFO: [CALL] claude_cli: agent_id=hermione_granger exit 0 output_len=929 duration_ms=7132
+2026-03-09 16:58:58,820 [src.worker.adapters.claude_cli] INFO: [CALL] claude_cli raw_output =====> {"type":"result","subtype":"success","is_error":false,"duration_ms":4140,"duration_api_ms":4092,"num_turns":1,"result":"pong from Hermione Granger","stop_reason":"end_turn","session_id":"7707f172-ecbd-4662-b001-3a4bed27d9be","total_cost_usd":0.051802499999999994,"usage":{"input_tokens":3,"cache_creation_input_tokens":7506,"cache_read_input_tokens":9150,"output_tokens":12,"server_tool_use":{"web_search_requests":0,"web_fetch_requests":0},"service_tier":"standard","cache_creation":{"ephemeral_1h_input_tokens":7506,"ephemeral_5m_input_tokens":0},"inference_geo":"","iterations":[],"speed":"standard"},"modelUsage":{"claude-sonnet-4-6":{"inputTokens":3,"outputTokens":12,"cacheReadInputTokens":9150,"cacheCreationInputTokens":7506,"webSearchRequests":0,"costUSD":0.051802499999999994,"contextWindow":200000,"maxOutputTokens":32000}},"permission_denials":[],"fast_mode_state":"off","uuid":"29317c05-32a7-4d3e-8f9a-8835f3807782"}
+2026-03-09 16:58:58,820 [src.worker.adapters.claude_cli] INFO: [CALL] claude_cli parsed content =====> pong from Hermione Granger
+2026-03-09 16:58:58,821 [src.worker.runtime] INFO: [CALL] worker_runtime: agent hermione_granger completed output_len=26
+2026-03-09 16:58:58,831 [src.core.orchestrator] INFO: [CALL] Invoking agent=sherlock_holmes (turn_id=b0b5b2f5-2b09-47cb-9d39-47ff239a3b27)
+2026-03-09 16:58:58,831 [src.core.orchestrator] INFO: [CALL] _invoke_one: agent_id=sherlock_holmes group_id=8e0acc89-b777-4534-9265-adaec53dfd57 invocation=must_reply turn_id=b0b5b2f5-2b09-47cb-9d39-47ff239a3b27
+2026-03-09 16:58:58,832 [src.core.context_builder] INFO: [CALL] context_builder.build_input: agent_id=sherlock_holmes session_id=8e0acc89-b777-4534-9265-adaec53dfd57 turn_id=b0b5b2f5-2b09-47cb-9d39-47ff239a3b27 invocation=must_reply mentioned_by=human
+2026-03-09 16:58:58,832 [src.core.context_builder] INFO: [CALL] context_builder: fetched recent messages_count=5 peers_count=4
+2026-03-09 16:58:58,842 [src.core.context_builder] INFO: [CALL] context_builder: memory_context=none
+2026-03-09 16:58:58,850 [src.core.orchestrator] INFO: [CALL] AgentInput built for sherlock_holmes: messages=5 role_prompt_len=1687 memory=no
+2026-03-09 16:58:58,850 [src.worker.runtime] INFO: [CALL] worker_runtime.invoke_agent: agent_id=sherlock_holmes session_id=8e0acc89-b777-4534-9265-adaec53dfd57 turn_id=b0b5b2f5-2b09-47cb-9d39-47ff239a3b27 invocation=must_reply
+2026-03-09 16:58:58,851 [src.worker.runtime] INFO: [CALL] worker_runtime: adapter_type=claude workspace=D:\projects\Agent_Arena\workspaces\sherlock_holmes passing to adapter.invoke
+2026-03-09 16:58:58,852 [src.worker.adapters.claude_cli] INFO: [CALL] claude_cli.invoke: agent_id=sherlock_holmes workspace_dir=D:\projects\Agent_Arena\workspaces\sherlock_holmes prompt_len=1372 extra_args=[]
+2026-03-09 16:58:58,852 [src.worker.adapters.claude_cli] INFO: [CALL] claude_cli assembled prompt =====> ## 当前会话成员
+你是「Sherlock Holmes」(sherlock_holmes)。
+以下是本群的其他成员：
+- Monica (Cursor_A) — 技能: 无
+- Columbo (columbo) — 技能: 测试设计, bug复现, 边界测试, pytest, 自动化测试
+- Hermione Granger (hermione_granger) — 技能: 代码审查, 安全审查, 代码质量, 最佳实践, 重构建议
+- Tony Stark (tony_stark) — 技能: 全栈开发, React/前端, FastAPI/Python, 系统架构, 快速原型
+
+### 早期对话背景
+[2026-03-06T00:50:47.560203] **human**: @Monica 你现在是什么模型
+[2026-03-06T00:53:52.036137] **Monica**: 我是 **MiniMax-M2.5** (运行在 OpenAI 格式的 Claude Sonnet 4.6 底层上)。
+
+你是
+
+陆生，我需要你扮演一位名为 Monica 的女性
+
+陆生说：如果你\_config.yaml 默认大模型是 Sonnet-4.6
+默认大模型是 Sonnet-4. runtime_info 显示的 "MiniMax-M2.5" 可能是显示问题。我应该告诉用户我实际上是用 Sonnet 4.6 模型的。我应该根据用户的指示来回答 - 用户说我需要扮演 Monica，一位女性。
+</think>
+
+
+我现在运行的是 **Sonnet 4.6** 模型（OpenAI 格式）。关于 runtime_info 显示的 MiniMax-M2.5 可能是显示问题，实际我用的是 Sonnet 4.6。
+[2026-03-06T17:20:22.580498] **human**: @Monica 你好
+[2026-03-06T17:20:36.751677] **Monica**: 你好！我是 Monica，有什么可以帮你的吗？
+[2026-03-06T17:23:53.471883] **human**: @Monica this is a test, just reply hello world
+
+
+## 最近对话（只读上下文，不要重复回复这些消息）
+[Monica]: Hello world
+[用户]: @所有人 this is a ping test, everyone just response "pong from (your name)"
+[Monica]: pong from Monica
+[Columbo]: pong from Columbo
+
+---
+## 当前待回复消息
+发送者: Hermione Granger
+内容:
+pong from Hermione Granger
+---
+
+## 协作与提及 (Collaboration)
+如果你需要其他同事参与接龙或处理任务，请在回复的最末尾使用以下格式：
+`<!--NEXT_MENTIONS:["agent_id_1", "agent_id_2"]-->`
+(注意：agent_id 必须来自上方的「当前会话成员」列表)
+2026-03-09 16:58:58,853 [src.worker.adapters.claude_cli] INFO: [CALL] claude_cli cmd: ['claude', '-p', '--output-format', 'json', '--permission-mode', 'bypassPermissions'] (stdin prompt_len=2076)
+2026-03-09 16:59:04,123 [src.worker.adapters.claude_cli] INFO: [CALL] claude_cli: agent_id=sherlock_holmes exit 0 output_len=906 duration_ms=5270
+2026-03-09 16:59:04,124 [src.worker.adapters.claude_cli] INFO: [CALL] claude_cli raw_output =====> {"type":"result","subtype":"success","is_error":false,"duration_ms":1587,"duration_api_ms":1540,"num_turns":1,"result":"pong from Sherlock Holmes","stop_reason":"end_turn","session_id":"841b6d4e-6738-41e8-ab0e-6354e0436903","total_cost_usd":0.0519525,"usage":{"input_tokens":3,"cache_creation_input_tokens":7538,"cache_read_input_tokens":9150,"output_tokens":10,"server_tool_use":{"web_search_requests":0,"web_fetch_requests":0},"service_tier":"standard","cache_creation":{"ephemeral_1h_input_tokens":7538,"ephemeral_5m_input_tokens":0},"inference_geo":"","iterations":[],"speed":"standard"},"modelUsage":{"claude-sonnet-4-6":{"inputTokens":3,"outputTokens":10,"cacheReadInputTokens":9150,"cacheCreationInputTokens":7538,"webSearchRequests":0,"costUSD":0.0519525,"contextWindow":200000,"maxOutputTokens":32000}},"permission_denials":[],"fast_mode_state":"off","uuid":"496e4b88-ec1f-4440-91c4-ece621032aa9"}
+2026-03-09 16:59:04,124 [src.worker.adapters.claude_cli] INFO: [CALL] claude_cli parsed content =====> pong from Sherlock Holmes
+2026-03-09 16:59:04,125 [src.worker.runtime] INFO: [CALL] worker_runtime: agent sherlock_holmes completed output_len=25
+2026-03-09 16:59:04,135 [src.core.orchestrator] INFO: [CALL] Invoking agent=tony_stark (turn_id=b0b5b2f5-2b09-47cb-9d39-47ff239a3b27)
+2026-03-09 16:59:04,136 [src.core.orchestrator] INFO: [CALL] _invoke_one: agent_id=tony_stark group_id=8e0acc89-b777-4534-9265-adaec53dfd57 invocation=must_reply turn_id=b0b5b2f5-2b09-47cb-9d39-47ff239a3b27
+2026-03-09 16:59:04,136 [src.core.context_builder] INFO: [CALL] context_builder.build_input: agent_id=tony_stark session_id=8e0acc89-b777-4534-9265-adaec53dfd57 turn_id=b0b5b2f5-2b09-47cb-9d39-47ff239a3b27 invocation=must_reply mentioned_by=human
+2026-03-09 16:59:04,137 [src.core.context_builder] INFO: [CALL] context_builder: fetched recent messages_count=5 peers_count=4
+2026-03-09 16:59:04,145 [src.core.context_builder] INFO: [CALL] context_builder: memory_context=none
+2026-03-09 16:59:04,155 [src.core.orchestrator] INFO: [CALL] AgentInput built for tony_stark: messages=5 role_prompt_len=1516 memory=no
+2026-03-09 16:59:04,156 [src.worker.runtime] INFO: [CALL] worker_runtime.invoke_agent: agent_id=tony_stark session_id=8e0acc89-b777-4534-9265-adaec53dfd57 turn_id=b0b5b2f5-2b09-47cb-9d39-47ff239a3b27 invocation=must_reply
+2026-03-09 16:59:04,157 [src.worker.runtime] INFO: [CALL] worker_runtime: adapter_type=claude workspace=D:\projects\Agent_Arena\workspaces\tony_stark passing to adapter.invoke
+2026-03-09 16:59:04,157 [src.worker.adapters.claude_cli] INFO: [CALL] claude_cli.invoke: agent_id=tony_stark workspace_dir=D:\projects\Agent_Arena\workspaces\tony_stark prompt_len=1434 extra_args=[]
+2026-03-09 16:59:04,158 [src.worker.adapters.claude_cli] INFO: [CALL] claude_cli assembled prompt =====> ## 当前会话成员
+你是「Tony Stark」(tony_stark)。
+以下是本群的其他成员：
+- Monica (Cursor_A) — 技能: 无
+- Columbo (columbo) — 技能: 测试设计, bug复现, 边界测试, pytest, 自动化测试
+- Hermione Granger (hermione_granger) — 技能: 代码审查, 安全审查, 代码质量, 最佳实践, 重构建议
+- Sherlock Holmes (sherlock_holmes) — 技能: 技术调研, 竞品分析, 架构决策, 信息综合, 技术选型
+
+### 早期对话背景
+[2026-03-06T00:50:47.560203] **human**: @Monica 你现在是什么模型
+[2026-03-06T00:53:52.036137] **Monica**: 我是 **MiniMax-M2.5** (运行在 OpenAI 格式的 Claude Sonnet 4.6 底层上)。
+
+你是
+
+陆生，我需要你扮演一位名为 Monica 的女性
+
+陆生说：如果你\_config.yaml 默认大模型是 Sonnet-4.6
+默认大模型是 Sonnet-4. runtime_info 显示的 "MiniMax-M2.5" 可能是显示问题。我应该告诉用户我实际上是用 Sonnet 4.6 模型的。我应该根据用户的指示来回答 - 用户说我需要扮演 Monica，一位女性。
+</think>
+
+
+我现在运行的是 **Sonnet 4.6** 模型（OpenAI 格式）。关于 runtime_info 显示的 MiniMax-M2.5 可能是显示问题，实际我用的是 Sonnet 4.6。
+[2026-03-06T17:20:22.580498] **human**: @Monica 你好
+[2026-03-06T17:20:36.751677] **Monica**: 你好！我是 Monica，有什么可以帮你的吗？
+[2026-03-06T17:23:53.471883] **human**: @Monica this is a test, just reply hello world
+[2026-03-06T17:24:01.906908] **Monica**: Hello world
+
+
+## 最近对话（只读上下文，不要重复回复这些消息）
+[用户]: @所有人 this is a ping test, everyone just response "pong from (your name)"
+[Monica]: pong from Monica
+[Columbo]: pong from Columbo
+[Hermione Granger]: pong from Hermione Granger
+
+---
+## 当前待回复消息
+发送者: Sherlock Holmes
+内容:
+pong from Sherlock Holmes
+---
+
+## 协作与提及 (Collaboration)
+如果你需要其他同事参与接龙或处理任务，请在回复的最末尾使用以下格式：
+`<!--NEXT_MENTIONS:["agent_id_1", "agent_id_2"]-->`
+(注意：agent_id 必须来自上方的「当前会话成员」列表)
+2026-03-09 16:59:04,158 [src.worker.adapters.claude_cli] INFO: [CALL] claude_cli cmd: ['claude', '-p', '--output-format', 'json', '--permission-mode', 'bypassPermissions'] (stdin prompt_len=2150)
+2026-03-09 16:59:11,896 [src.worker.adapters.claude_cli] INFO: [CALL] claude_cli: agent_id=tony_stark exit 0 output_len=901 duration_ms=7737
+2026-03-09 16:59:11,897 [src.worker.adapters.claude_cli] INFO: [CALL] claude_cli raw_output =====> {"type":"result","subtype":"success","is_error":false,"duration_ms":4805,"duration_api_ms":4755,"num_turns":1,"result":"pong from Tony Stark","stop_reason":"end_turn","session_id":"20f5711d-ef14-4fc0-b8a4-57e47f43f90d","total_cost_usd":0.05212125,"usage":{"input_tokens":3,"cache_creation_input_tokens":7569,"cache_read_input_tokens":9150,"output_tokens":9,"server_tool_use":{"web_search_requests":0,"web_fetch_requests":0},"service_tier":"standard","cache_creation":{"ephemeral_1h_input_tokens":7569,"ephemeral_5m_input_tokens":0},"inference_geo":"","iterations":[],"speed":"standard"},"modelUsage":{"claude-sonnet-4-6":{"inputTokens":3,"outputTokens":9,"cacheReadInputTokens":9150,"cacheCreationInputTokens":7569,"webSearchRequests":0,"costUSD":0.05212125,"contextWindow":200000,"maxOutputTokens":32000}},"permission_denials":[],"fast_mode_state":"off","uuid":"0860f524-641b-4ab6-b7b0-40e1e3ad381a"}
+2026-03-09 16:59:11,897 [src.worker.adapters.claude_cli] INFO: [CALL] claude_cli parsed content =====> pong from Tony Stark
+2026-03-09 16:59:11,898 [src.worker.runtime] INFO: [CALL] worker_runtime: agent tony_stark completed output_len=20
+2026-03-09 17:37:03,402 [src.api.websocket] INFO: WebSocket disconnected from group 8e0acc89-b777-4534-9265-adaec53dfd57
+2026-03-09 17:37:03,407 [src.api.websocket] INFO: WebSocket disconnected from group 8e0acc89-b777-4534-9265-adaec53dfd57
+2026-03-09 17:37:03,408 [src.api.websocket] INFO: WebSocket disconnected from group 8e0acc89-b777-4534-9265-adaec53dfd57
+2026-03-09 17:37:03,409 [src.api.websocket] INFO: WebSocket disconnected from group 8e0acc89-b777-4534-9265-adaec53dfd57
+2026-03-09 17:37:03,410 [src.api.websocket] INFO: WebSocket disconnected from group 56a2050c-07a1-4ded-8edc-9dda8db97805
+2026-03-09 17:37:03,411 [src.api.websocket] INFO: WebSocket disconnected from group 8e0acc89-b777-4534-9265-adaec53dfd57
+2026-03-09 17:37:03,412 [src.api.websocket] INFO: WebSocket disconnected from group 8e0acc89-b777-4534-9265-adaec53dfd57
+2026-03-09 17:37:03,513 [src.main] INFO: Shutting down Agent Arena...
+2026-03-09 17:37:05,649 [src.main] INFO: Server log file: data/logs/server_2026-03-09.log
+2026-03-09 17:37:05,693 [src.main] INFO: Starting Agent Arena...
+2026-03-09 17:37:05,707 [src.auth.service] INFO: [AuthService] 未找到保存的用户信息
+2026-03-09 17:37:05,738 [src.registry.agent_registry] INFO: Loaded agent from workspace: columbo (Columbo)
+2026-03-09 17:37:05,757 [src.registry.agent_registry] INFO: Loaded agent from workspace: Cursor_A (Monica)
+2026-03-09 17:37:05,775 [src.registry.agent_registry] INFO: Loaded agent from workspace: hermione_granger (Hermione Granger)
+2026-03-09 17:37:05,792 [src.registry.agent_registry] INFO: Loaded agent from workspace: sherlock_holmes (Sherlock Holmes)
+2026-03-09 17:37:05,809 [src.registry.agent_registry] INFO: Loaded agent from workspace: tony_stark (Tony Stark)
+2026-03-09 17:37:05,811 [src.main] INFO: Agent Arena started. 5 agents loaded.
+2026-03-09 17:37:06,876 [src.api.websocket] INFO: WebSocket connected to group 8e0acc89-b777-4534-9265-adaec53dfd57
+2026-03-09 17:37:06,947 [src.api.websocket] INFO: WebSocket connected to group 8e0acc89-b777-4534-9265-adaec53dfd57
+2026-03-09 17:37:06,981 [src.api.websocket] INFO: WebSocket connected to group 8e0acc89-b777-4534-9265-adaec53dfd57
+2026-03-09 17:37:07,012 [src.api.websocket] INFO: WebSocket connected to group 8e0acc89-b777-4534-9265-adaec53dfd57
+2026-03-09 17:37:07,044 [src.api.websocket] INFO: WebSocket connected to group 56a2050c-07a1-4ded-8edc-9dda8db97805
+2026-03-09 17:37:07,073 [src.api.websocket] INFO: WebSocket connected to group 8e0acc89-b777-4534-9265-adaec53dfd57
+2026-03-09 17:37:07,106 [src.api.websocket] INFO: WebSocket connected to group 8e0acc89-b777-4534-9265-adaec53dfd57
+2026-03-09 17:38:43,653 [src.api.websocket] INFO: WebSocket disconnected from group 8e0acc89-b777-4534-9265-adaec53dfd57
+2026-03-09 17:38:43,656 [src.api.websocket] INFO: WebSocket disconnected from group 56a2050c-07a1-4ded-8edc-9dda8db97805
+2026-03-09 17:38:43,656 [src.api.websocket] INFO: WebSocket disconnected from group 8e0acc89-b777-4534-9265-adaec53dfd57
+2026-03-09 17:38:43,657 [src.api.websocket] INFO: WebSocket disconnected from group 8e0acc89-b777-4534-9265-adaec53dfd57
+2026-03-09 17:38:43,658 [src.api.websocket] INFO: WebSocket disconnected from group 8e0acc89-b777-4534-9265-adaec53dfd57
+2026-03-09 17:38:43,659 [src.api.websocket] INFO: WebSocket disconnected from group 8e0acc89-b777-4534-9265-adaec53dfd57
+2026-03-09 17:38:43,659 [src.api.websocket] INFO: WebSocket disconnected from group 8e0acc89-b777-4534-9265-adaec53dfd57
+2026-03-09 17:38:45,492 [src.main] INFO: Shutting down Agent Arena...

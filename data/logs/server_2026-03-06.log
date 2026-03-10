@@ -434,3 +434,105 @@ Monica Geller - 个人长期记忆
 2026-03-06 17:22:36,023 [src.api.websocket] INFO: WebSocket disconnected from group 8e0acc89-b777-4534-9265-adaec53dfd57
 2026-03-06 17:22:36,023 [src.api.websocket] INFO: WebSocket disconnected from group 56a2050c-07a1-4ded-8edc-9dda8db97805
 2026-03-06 17:22:36,130 [src.main] INFO: Shutting down Agent Arena...
+2026-03-06 17:22:46,096 [src.main] INFO: Server log file: data/logs/server_2026-03-06.log
+2026-03-06 17:22:46,118 [src.main] INFO: Starting Agent Arena...
+2026-03-06 17:22:46,125 [src.auth.service] INFO: [AuthService] 未找到保存的用户信息
+2026-03-06 17:22:46,139 [src.registry.agent_registry] INFO: Loaded agent from workspace: columbo (Columbo)
+2026-03-06 17:22:46,150 [src.registry.agent_registry] INFO: Loaded agent from workspace: Cursor_A (Monica)
+2026-03-06 17:22:46,165 [src.registry.agent_registry] INFO: Loaded agent from workspace: hermione_granger (Hermione Granger)
+2026-03-06 17:22:46,182 [src.registry.agent_registry] INFO: Loaded agent from workspace: sherlock_holmes (Sherlock Holmes)
+2026-03-06 17:22:46,198 [src.registry.agent_registry] INFO: Loaded agent from workspace: tony_stark (Tony Stark)
+2026-03-06 17:22:46,199 [src.main] INFO: Agent Arena started. 5 agents loaded.
+2026-03-06 17:22:46,204 [src.api.websocket] INFO: WebSocket connected to group 56a2050c-07a1-4ded-8edc-9dda8db97805
+2026-03-06 17:22:46,233 [src.api.websocket] INFO: WebSocket connected to group 8e0acc89-b777-4534-9265-adaec53dfd57
+2026-03-06 17:22:50,125 [src.api.websocket] INFO: WebSocket connected to group 6d0c9fcf-ec4a-4824-a105-53913e213efd
+2026-03-06 17:22:50,141 [src.api.websocket] INFO: WebSocket connected to group fab7b4be-d7ef-4802-969d-531c0720180b
+2026-03-06 17:22:50,156 [src.api.websocket] INFO: WebSocket connected to group 56a2050c-07a1-4ded-8edc-9dda8db97805
+2026-03-06 17:22:50,172 [src.api.websocket] INFO: WebSocket connected to group 8e0acc89-b777-4534-9265-adaec53dfd57
+2026-03-06 17:22:50,188 [src.api.websocket] INFO: WebSocket connected to group 8e0acc89-b777-4534-9265-adaec53dfd57
+2026-03-06 17:23:11,418 [src.api.websocket] INFO: WebSocket disconnected from group 8e0acc89-b777-4534-9265-adaec53dfd57
+2026-03-06 17:23:11,419 [src.api.websocket] INFO: WebSocket disconnected from group 6d0c9fcf-ec4a-4824-a105-53913e213efd
+2026-03-06 17:23:11,420 [src.api.websocket] INFO: WebSocket disconnected from group fab7b4be-d7ef-4802-969d-531c0720180b
+2026-03-06 17:23:11,421 [src.api.websocket] INFO: WebSocket disconnected from group 56a2050c-07a1-4ded-8edc-9dda8db97805
+2026-03-06 17:23:11,421 [src.api.websocket] INFO: WebSocket disconnected from group 8e0acc89-b777-4534-9265-adaec53dfd57
+2026-03-06 17:23:11,422 [src.api.websocket] INFO: WebSocket disconnected from group 56a2050c-07a1-4ded-8edc-9dda8db97805
+2026-03-06 17:23:11,422 [src.api.websocket] INFO: WebSocket disconnected from group 8e0acc89-b777-4534-9265-adaec53dfd57
+2026-03-06 17:23:13,593 [src.api.websocket] INFO: WebSocket connected to group 8e0acc89-b777-4534-9265-adaec53dfd57
+2026-03-06 17:23:53,459 [src.api.routes_message] INFO: [CALL] API send_message: group_id=8e0acc89-b777-4534-9265-adaec53dfd57 author_id=human content_len=46 mentions=['Cursor_A']
+2026-03-06 17:23:53,469 [src.api.routes_message] INFO: [CALL] API send_message: triggering orchestrator.on_new_message (async)
+2026-03-06 17:23:53,471 [src.core.orchestrator] INFO: [CALL] on_new_message: group_id=8e0acc89-b777-4534-9265-adaec53dfd57 author_id=human content_len=46 content_preview=@Monica this is a test, just reply hello world
+2026-03-06 17:23:53,478 [src.core.orchestrator] INFO: [CALL] Group resolved: agent_members=['Cursor_A']
+2026-03-06 17:23:53,479 [src.core.orchestrator] INFO: [CALL] Mention resolution: frontend_mentions=['Cursor_A'] parsed_mentions=['Cursor_A']
+2026-03-06 17:23:53,479 [src.core.orchestrator] INFO: [CALL] Explicit @mentions → must_reply=['Cursor_A']
+2026-03-06 17:23:53,479 [src.core.orchestrator] INFO: [CALL] Turn created: turn_id=0213ecc4-ff32-4646-8e11-388e8ac2a88b trigger_source=human must_reply_agents=['Cursor_A'] max_responders=5
+2026-03-06 17:23:53,480 [src.core.orchestrator] INFO: [CALL] execute_turn: turn_id=0213ecc4-ff32-4646-8e11-388e8ac2a88b group_id=8e0acc89-b777-4534-9265-adaec53dfd57 chain_depth=0 must_reply=['Cursor_A']
+2026-03-06 17:23:53,480 [src.core.orchestrator] INFO: [CALL] Invoking agent=Cursor_A (turn_id=0213ecc4-ff32-4646-8e11-388e8ac2a88b)
+2026-03-06 17:23:53,480 [src.core.orchestrator] INFO: [CALL] _invoke_one: agent_id=Cursor_A group_id=8e0acc89-b777-4534-9265-adaec53dfd57 invocation=must_reply turn_id=0213ecc4-ff32-4646-8e11-388e8ac2a88b
+2026-03-06 17:23:53,481 [src.core.context_builder] INFO: [CALL] context_builder.build_input: agent_id=Cursor_A session_id=8e0acc89-b777-4534-9265-adaec53dfd57 turn_id=0213ecc4-ff32-4646-8e11-388e8ac2a88b invocation=must_reply mentioned_by=human
+2026-03-06 17:23:53,482 [src.core.context_builder] INFO: [CALL] context_builder: fetched recent messages_count=5 peers_count=0
+2026-03-06 17:23:53,495 [src.core.context_builder] INFO: [CALL] context_builder: memory_context=128 chars
+2026-03-06 17:23:53,516 [src.core.orchestrator] INFO: [CALL] AgentInput built for Cursor_A: messages=5 role_prompt_len=1784 memory=yes
+2026-03-06 17:23:53,517 [src.worker.runtime] INFO: [CALL] worker_runtime.invoke_agent: agent_id=Cursor_A session_id=8e0acc89-b777-4534-9265-adaec53dfd57 turn_id=0213ecc4-ff32-4646-8e11-388e8ac2a88b invocation=must_reply
+2026-03-06 17:23:53,518 [src.worker.runtime] INFO: [CALL] worker_runtime: adapter_type=claude workspace=D:\projects\Agent_Arena\workspaces\Cursor_A passing to adapter.invoke
+2026-03-06 17:23:53,518 [src.worker.adapters.claude_cli] INFO: [CALL] claude_cli.invoke: agent_id=Cursor_A workspace_dir=D:\projects\Agent_Arena\workspaces\Cursor_A prompt_len=1241 extra_args=[]
+2026-03-06 17:23:53,519 [src.worker.adapters.claude_cli] INFO: [CALL] claude_cli assembled prompt =====> ## 当前会话成员
+你是「Monica」(Cursor_A)。
+
+### 早期对话背景
+[2026-03-06T00:50:47.560203] **human**: @Monica 你现在是什么模型
+[2026-03-06T00:53:52.036137] **Monica**: 我是 **MiniMax-M2.5** (运行在 OpenAI 格式的 Claude Sonnet 4.6 底层上)。
+
+你是
+
+陆生，我需要你扮演一位名为 Monica 的女性
+
+陆生说：如果你\_config.yaml 默认大模型是 Sonnet-4.6
+默认大模型是 Sonnet-4. runtime_info 显示的 "MiniMax-M2.5" 可能是显示问题。我应该告诉用户我实际上是用 Sonnet 4.6 模型的。我应该根据用户的指示来回答 - 用户说我需要扮演 Monica，一位女性。
+</think>
+
+
+
+## 最近对话（只读上下文，不要重复回复这些消息）
+[用户]: @Monica 你现在是什么模型
+[Monica]: 我是 **MiniMax-M2.5** (运行在 OpenAI 格式的 Claude Sonnet 4.6 底层上)。
+
+你是
+
+陆生，我需要你扮演一位名为 Monica 的女性
+
+陆生说：如果你\_config.yaml 默认大模型是 Sonnet-4.6
+默认大模型是 Sonnet-4. runtime_info 显示的 "MiniMax-M2.5" 可能是显示问题。我应该告诉用户我实际上是用 Sonnet 4.6 模型的。我应该根据用户的指示来回答 - 用户说我需要扮演 Monica，一位女性。
+</think>
+
+
+我现在运行的是 **Sonnet 4.6** 模型（OpenAI 格式）。关于 runtime_info 显示的 MiniMax-M2.5 可能是显示问题，实际我用的是 Sonnet 4.6。
+[用户]: @Monica 你好
+[Monica]: 你好！我是 Monica，有什么可以帮你的吗？
+
+## 相关记忆
+### 个人长期记忆
+Monica Geller - 个人长期记忆
+
+> 记录跨会话的重要经验、决策模式和工作洞察。
+> 由 Orchestrator 在解析 <!--PERSONAL_LOG:--> 标记后写入，也可在心跳蒸馏时由 Agent 自主更新。
+
+---
+## 当前待回复消息
+发送者: 用户
+内容:
+@Monica this is a test, just reply hello world
+---
+
+## 协作与提及 (Collaboration)
+如果你需要其他同事参与接龙或处理任务，请在回复的最末尾使用以下格式：
+`<!--NEXT_MENTIONS:["agent_id_1", "agent_id_2"]-->`
+(注意：agent_id 必须来自上方的「当前会话成员」列表)
+2026-03-06 17:23:53,520 [src.worker.adapters.claude_cli] INFO: [CALL] claude_cli cmd: ['claude', '-p', '--output-format', 'json', '--permission-mode', 'bypassPermissions'] (stdin prompt_len=2147)
+2026-03-06 17:24:01,895 [src.worker.adapters.claude_cli] INFO: [CALL] claude_cli: agent_id=Cursor_A exit 0 output_len=906 duration_ms=8375
+2026-03-06 17:24:01,896 [src.worker.adapters.claude_cli] INFO: [CALL] claude_cli raw_output =====> {"type":"result","subtype":"success","is_error":false,"duration_ms":2929,"duration_api_ms":2825,"num_turns":1,"result":"Hello world","stop_reason":"end_turn","session_id":"e31946a8-2916-4fd0-9cf5-339e15575dee","total_cost_usd":0.054177499999999996,"usage":{"input_tokens":3,"cache_creation_input_tokens":8646,"cache_read_input_tokens":0,"output_tokens":5,"server_tool_use":{"web_search_requests":0,"web_fetch_requests":0},"service_tier":"standard","cache_creation":{"ephemeral_1h_input_tokens":0,"ephemeral_5m_input_tokens":8646},"inference_geo":"","iterations":[],"speed":"standard"},"modelUsage":{"claude-sonnet-4-6":{"inputTokens":3,"outputTokens":5,"cacheReadInputTokens":0,"cacheCreationInputTokens":8646,"webSearchRequests":0,"costUSD":0.054177499999999996,"contextWindow":200000,"maxOutputTokens":32000}},"permission_denials":[],"fast_mode_state":"off","uuid":"16ad8e9c-7308-4150-a426-65db0061d07f"}
+2026-03-06 17:24:01,897 [src.worker.adapters.claude_cli] INFO: [CALL] claude_cli parsed content =====> Hello world
+2026-03-06 17:24:01,897 [src.worker.runtime] INFO: [CALL] worker_runtime: agent Cursor_A completed output_len=11
+2026-03-06 18:26:23,658 [src.api.websocket] INFO: WebSocket disconnected from group 8e0acc89-b777-4534-9265-adaec53dfd57
+2026-03-07 22:40:07,559 [src.api.websocket] INFO: WebSocket connected to group 8e0acc89-b777-4534-9265-adaec53dfd57
+2026-03-07 22:40:31,814 [src.api.websocket] INFO: WebSocket disconnected from group 8e0acc89-b777-4534-9265-adaec53dfd57
+2026-03-08 01:09:38,533 [src.main] INFO: Shutting down Agent Arena...

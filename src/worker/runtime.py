@@ -15,6 +15,7 @@ from src.worker.adapters.claude_cli import ClaudeCliAdapter
 from src.worker.adapters.cursor_cli import CursorCliAdapter
 from src.worker.adapters.gemini_cli import GeminiCliAdapter
 from src.worker.adapters.generic_cli import GenericCliAdapter
+from src.worker.adapters.opencode_cli import OpencodeCliAdapter
 
 if TYPE_CHECKING:
     from src.api.websocket import WebSocketManager
@@ -62,6 +63,15 @@ class WorkerRuntime:
             )
         elif cli_type == "gemini":
             return GeminiCliAdapter(
+                timeout=cli_config.get("timeout", 300),
+                extra_args=cli_config.get("extra_args", []),
+                env=cli_config.get("env"),
+                mcp_config=mcp_config,
+                skill_definitions=skill_definitions or [],
+            )
+        elif cli_type == "opencode":
+            return OpencodeCliAdapter(
+                model=cli_config.get("command") or None,  # command 字段复用为模型名
                 timeout=cli_config.get("timeout", 300),
                 extra_args=cli_config.get("extra_args", []),
                 env=cli_config.get("env"),
